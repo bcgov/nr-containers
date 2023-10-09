@@ -12,22 +12,22 @@ concurrency:
 
 jobs:
   # https://github.com/bcgov-nr/action-builder-ghcr
-  builds:
-    name: Databases
+  Databases:
     if: "!github.event.pull_request.head.repo.fork"
-    runs-on: ubuntu-22.04
     permissions:
       packages: write
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         package: [postgres, postgis]
         include:
           - tag: [12, 13, 14, 15]         
-    timeout-minutes: 10
     steps:
       - uses: bcgov-nr/action-builder-ghcr@v1.3.0
         with:
+          build_context: database/${{ matrix.package }}/${{ matrix.tag }}
           keep_versions: 50
           package: ${{ matrix.package }}
           tag: ${{ matrix.tag }}
-          triggers: database/${{ matrix. package}}/${{ matrix.triggers }}
+          triggers: database/${{ matrix.package}}/${{ matrix.triggers }}
+    timeout-minutes: 10
