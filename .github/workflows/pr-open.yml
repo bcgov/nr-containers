@@ -11,104 +11,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  pr-greeting:
-    if: "!github.event.pull_request.head.repo.fork"
-    name: PR Greeting
-    env:
-      DOMAIN: apps.silver.devops.gov.bc.ca
-      PREFIX: ${{ github.event.repository.name }}-${{ github.event.number }}
-    runs-on: ubuntu-22.04
-    permissions:
-      pull-requests: write
-    timeout-minutes: 1
-    steps:
-      - name: PR Greeting
-        uses: bcgov-nr/action-pr-description-add@v1.1.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          add_markdown: |
-            ---
-
-            Thanks for the PR!
-
-            Deployments, as required, will be available below:
-            - [Frontend](https://${{ env.PREFIX }}-frontend.${{ env.DOMAIN }})
-            - [Backend](https://${{ env.PREFIX }}-backend.${{ env.DOMAIN }}/api)
-
-            Please create PRs in draft mode.  Mark as ready to enable:
-            - [Analysis Workflow](https://github.com/${{ github.repository }}/actions/workflows/analysis.yml)
-
-            After merge, new images are promoted to:
-            - [Merge Workflow](https://github.com/${{ github.repository }}/actions/workflows/merge-main.yml)
-
   # https://github.com/bcgov-nr/action-builder-ghcr
-  builds:
-    name: Builds
+  DBs:
     if: "!github.event.pull_request.head.repo.fork"
-    runs-on: ubuntu-22.04
     permissions:
       packages: write
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
-        package: [database, migrations, backend, frontend]
-        include:
-          - package: database
-            triggers: ('database/')
-          - package: migrations
-            build_context: ./backend/db
-            triggers: ('backend/db')
-          - package: backend
-            triggers: ('backend/')
-          - package: frontend
-            triggers: ('frontend/')
-    timeout-minutes: 10
+        package: [postgres, postgis]
+        tag: [12, 13, 14, 15]         
     steps:
       - uses: bcgov-nr/action-builder-ghcr@v1.3.0
         with:
+          build_context: database/${{ matrix.package }}/${{ matrix.tag }}
           keep_versions: 50
           package: ${{ matrix.package }}
-          tag: ${{ github.event.number }}
-          tag_fallback: test
-          token: ${{ secrets.GITHUB_TOKEN }}
-          triggers: ${{ matrix.triggers }}
-          build_context: ${{ matrix.build_context }}
-
-  # https://github.com/bcgov-nr/action-deployer-openshift
-  deploys:
-    name: Deploys
-    if: "!github.event.pull_request.head.repo.fork"
-    needs: [builds]
-    runs-on: ubuntu-22.04
+          tag: ${{ matrix.tag }}
+          token: ${{ github.token }}
+          triggers: database/${{ matrix.package}}/${{ matrix.triggers }}
     timeout-minutes: 10
-    strategy:
-      matrix:
-        name: [database, backend, frontend]
-        include:
-          - name: database
-            file: database/openshift.deploy.yml
-            overwrite: false
-            triggers: ('database/' 'backend/' 'frontend/')
-          - name: backend
-            file: backend/openshift.deploy.yml
-            overwrite: true
-            parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-            triggers: ('database/' 'backend/' 'frontend/')
-            verification_path: /api
-          - name: frontend
-            file: frontend/openshift.deploy.yml
-            overwrite: true
-            parameters: -p MIN_REPLICAS=1 -p MAX_REPLICAS=2
-            triggers: ('database/' 'backend/' 'frontend/')
+
+  Wrap-up:
+    needs: [DBs]
+    runs-on: ubuntu-22.04
     steps:
-      - uses: bcgov-nr/action-deployer-openshift@v2.0.0
-        with:
-          file: ${{ matrix.file }}
-          oc_namespace: ${{ vars.OC_NAMESPACE }}
-          oc_server: ${{ vars.OC_SERVER }}
-          oc_token: ${{ secrets.OC_TOKEN }}
-          overwrite: ${{ matrix.overwrite }}
-          parameters:
-            -p ZONE=${{ github.event.number }} -p NAME=${{ github.event.repository.name }}
-            ${{ matrix.parameters }}
-          triggers: ${{ matrix.triggers }}
-          verification_path: ${{ matrix.verification_path }}
+      - name: Wrap-up
+        run: |
+          echo "Dummy step for workflow completion"
