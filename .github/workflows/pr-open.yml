@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   # https://github.com/bcgov-nr/action-builder-ghcr
-  Databases:
+  DBs:
     if: "!github.event.pull_request.head.repo.fork"
     permissions:
       packages: write
@@ -31,3 +31,11 @@ jobs:
           token: ${{ github.token }}
           triggers: database/${{ matrix.package}}/${{ matrix.triggers }}
     timeout-minutes: 10
+
+  post-build:
+    needs: [DBs]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Post build
+        run: |
+          echo "Dummy step for workflow completion"
