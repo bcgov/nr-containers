@@ -11,64 +11,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  pr-greeting:
-    if: "!github.event.pull_request.head.repo.fork"
-    name: PR Greeting
-    env:
-      DOMAIN: apps.silver.devops.gov.bc.ca
-      PREFIX: ${{ github.event.repository.name }}-${{ github.event.number }}
-    runs-on: ubuntu-22.04
-    permissions:
-      pull-requests: write
-    timeout-minutes: 1
-    steps:
-      - name: PR Greeting
-        uses: bcgov-nr/action-pr-description-add@v1.1.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          add_markdown: |
-            ---
-
-            Thanks for the PR!
-
-            Deployments, as required, will be available below:
-            - [Frontend](https://${{ env.PREFIX }}-frontend.${{ env.DOMAIN }})
-            - [Backend](https://${{ env.PREFIX }}-backend.${{ env.DOMAIN }}/api)
-
-            Please create PRs in draft mode.  Mark as ready to enable:
-            - [Analysis Workflow](https://github.com/${{ github.repository }}/actions/workflows/analysis.yml)
-
-            After merge, new images are promoted to:
-            - [Merge Workflow](https://github.com/${{ github.repository }}/actions/workflows/merge-main.yml)
-
   # https://github.com/bcgov-nr/action-builder-ghcr
   builds:
-    name: Builds
+    name: Databases
     if: "!github.event.pull_request.head.repo.fork"
     runs-on: ubuntu-22.04
     permissions:
       packages: write
     strategy:
       matrix:
-        package: [database, migrations, backend, frontend]
+        package: [postgres, postgis]
         include:
-          - package: database
-            triggers: ('database/')
-          - package: migrations
-            build_context: ./backend/db
-            triggers: ('backend/db')
-          - package: backend
-            triggers: ('backend/')
-          - package: frontend
-            triggers: ('frontend/')
+          - tag: [12, 13, 14, 15]         
     timeout-minutes: 10
     steps:
       - uses: bcgov-nr/action-builder-ghcr@v1.3.0
         with:
           keep_versions: 50
           package: ${{ matrix.package }}
-          tag: ${{ github.event.number }}
-          tag_fallback: test
-          token: ${{ secrets.GITHUB_TOKEN }}
-          triggers: ${{ matrix.triggers }}
-          build_context: ${{ matrix.build_context }}
+          tag: ${{ matrix.tag }}
+          triggers: database/${{ matrix. package}}/${{ matrix.triggers }}
