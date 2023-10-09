@@ -25,7 +25,6 @@ jobs:
       - uses: bcgov-nr/action-builder-ghcr@v1.3.0
         with:
           build_context: database/${{ matrix.package }}/${{ matrix.tag }}
-          keep_versions: 50
           package: ${{ matrix.package }}
           tag: ${{ matrix.tag }}
           token: ${{ github.token }}
