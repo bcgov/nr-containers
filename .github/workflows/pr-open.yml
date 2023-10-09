@@ -28,5 +28,6 @@ jobs:
           keep_versions: 50
           package: ${{ matrix.package }}
           tag: ${{ matrix.tag }}
+          token: ${{ github.token }}
           triggers: database/${{ matrix.package}}/${{ matrix.triggers }}
     timeout-minutes: 10
