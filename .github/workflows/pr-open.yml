@@ -32,10 +32,10 @@ jobs:
           triggers: database/${{ matrix.package}}/${{ matrix.triggers }}
     timeout-minutes: 10
 
-  post-build:
+  Wrap-up:
     needs: [DBs]
     runs-on: ubuntu-22.04
     steps:
-      - name: Post build
+      - name: Wrap-up
         run: |
           echo "Dummy step for workflow completion"
