@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   # https://github.com/bcgov-nr/action-builder-ghcr
-  DBs:
+  builds:
     if: "!github.event.pull_request.head.repo.fork"
     permissions:
       packages: write
@@ -39,7 +39,7 @@ jobs:
           token: ${{ github.token }}
           triggers: database/${{ matrix.package}}/${{ matrix.triggers }}
 
-  Cleanup:
+  ghcr-cleanup:
     needs: [DBs]
     runs-on: ubuntu-22.04
     strategy:
@@ -52,3 +52,11 @@ jobs:
           package-type: 'container'
           min-versions-to-keep: 0
           delete-only-untagged-versions: 'true'
+
+  Wrap-up:
+    needs: [ghcr-cleanup]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Wrap-up
+        run: |
+          echo "Dummy step for workflow completion"
