@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        package: [postgres, postgis, bitnami/postgres]
+        package: [postgres/postgres, postgis/postgis, bitnami/postgres]
     steps:
       - uses: actions/delete-package-versions@v4
         with:
