@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/delete-package-versions@v4
         with:
-          package-name: ${{ matrix.package }}
+          package-name: ${{ github.event.repository.name }}/${{ matrix.package }}
           package-type: 'container'
           min-versions-to-keep: 0
           delete-only-untagged-versions: 'true'
