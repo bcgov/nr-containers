@@ -13,10 +13,6 @@ concurrency:
 jobs:
   # https://github.com/bcgov-nr/action-builder-ghcr
   DBs:
-    defaults:
-      run:
-        shell: bash
-        working-directory: ./database
     if: "!github.event.pull_request.head.repo.fork"
     permissions:
       packages: write
@@ -31,17 +27,17 @@ jobs:
       - name: Get first tag
         id: tag
         run: |
-          TAG=$(grep '^FROM' ${{ matrix.package }}/${{ matrix.tag }}/Dockerfile | cut -d':' -f2)
+          TAG=$(grep '^FROM' database/${{ matrix.package }}/${{ matrix.tag }}/Dockerfile | cut -d':' -f2)
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
 
       - name: Build or import
         uses: bcgov-nr/action-builder-ghcr@v1.3.0
         with:
-          build_context: ${{ matrix.package }}/${{ matrix.tag }}
+          build_context: database/${{ matrix.package }}/${{ matrix.tag }}
           package: ${{ matrix.package }}
           tag: ${{ steps.tag.outputs.tag }}
           token: ${{ github.token }}
-          triggers: ${{ matrix.package}}/${{ matrix.triggers }}
+          triggers: database/${{ matrix.package}}/${{ matrix.triggers }}
 
   Wrap-up:
     needs: [DBs]
