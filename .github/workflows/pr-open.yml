@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        package: [postgres/postgres, postgres/postgis, bitnami/postgres]
+        package: [postgres/postgres, postgis/postgis, bitnami/postgres]
         tag: [12, 13, 14, 15, 16]
     timeout-minutes: 10
     steps:
