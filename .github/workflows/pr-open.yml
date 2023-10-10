@@ -39,10 +39,16 @@ jobs:
           token: ${{ github.token }}
           triggers: database/${{ matrix.package}}/${{ matrix.triggers }}
 
-  Wrap-up:
+  Cleanup:
     needs: [DBs]
     runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        package: [postgres, postgis, bitnami/postgres]
     steps:
-      - name: Wrap-up
-        run: |
-          echo "Dummy step for workflow completion"
+      - uses: actions/delete-package-versions@v4
+        with:
+          package-name: ${{ matrix.package }}
+          package-type: 'container'
+          min-versions-to-keep: 0
+          delete-only-untagged-versions: 'true'
