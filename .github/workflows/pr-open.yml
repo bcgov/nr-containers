@@ -16,7 +16,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working_directory: ./database
+        working-directory: ./database
     if: "!github.event.pull_request.head.repo.fork"
     permissions:
       packages: write
