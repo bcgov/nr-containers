@@ -20,7 +20,7 @@ jobs:
     strategy:
       matrix:
         package: [postgres, postgis, bitnami/postgres]
-        tag: [12, 13, 14, 15]
+        tag: [12, 13, 14, 15, 16]
     steps:
       - uses: bcgov-nr/action-builder-ghcr@v1.3.0
         with:
