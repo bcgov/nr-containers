@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        package: [postgres/postgres, postgis/postgis, bitnami/postgres]
+        package: [bitnami/postgres]
         tag: [12, 13, 14, 15, 16]
     timeout-minutes: 10
     steps:
@@ -27,24 +27,24 @@ jobs:
       - name: Get first tag
         id: tag
         run: |
-          TAG=$(grep '^FROM' database/${{ matrix.package }}/${{ matrix.tag }}/Dockerfile | cut -d':' -f2)
+          TAG=$(grep '^FROM' ${{ matrix.package }}/${{ matrix.tag }}/Dockerfile | cut -d':' -f2)
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
 
       - name: Build or import
         uses: bcgov-nr/action-builder-ghcr@v1.3.0
         with:
-          build_context: database/${{ matrix.package }}/${{ matrix.tag }}
+          build_context: ${{ matrix.package }}/${{ matrix.tag }}
           package: ${{ matrix.package }}
           tag: ${{ steps.tag.outputs.tag }}
           token: ${{ github.token }}
-          triggers: database/${{ matrix.package}}/${{ matrix.triggers }}
+          triggers: ${{ matrix.package}}/${{ matrix.triggers }}
 
   ghcr-cleanup:
     needs: [builds]
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        package: [postgres/postgres, postgis/postgis, bitnami/postgres]
+        package: [bitnami/postgres]
     steps:
       - uses: actions/delete-package-versions@v4
         with:
