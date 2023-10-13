@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   # https://github.com/bcgov-nr/action-builder-ghcr
-  postgres:
+  builds:
     if: "!github.event.pull_request.head.repo.fork"
     permissions:
       packages: write
