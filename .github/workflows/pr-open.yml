@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   # https://github.com/bcgov-nr/action-builder-ghcr
-  builds:
+  Builds:
     if: "!github.event.pull_request.head.repo.fork"
     permissions:
       packages: write
@@ -39,24 +39,6 @@ jobs:
           token: ${{ github.token }}
           triggers: ${{ matrix.package}}/${{ matrix.triggers }}
 
-  ghcr-cleanup:
-    needs: [builds]
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        package: [bitnami/postgresql, postgres/postgres]
-    steps:
-      - uses: actions/delete-package-versions@v4
-        with:
-          package-name: ${{ github.event.repository.name }}/${{ matrix.package }}
-          package-type: 'container'
-          min-versions-to-keep: 10
-          delete-only-untagged-versions: 'true'
-
-  wrap-up:
-    needs: [ghcr-cleanup]
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Wrap-up
-        run: |
-          echo "Dummy step for workflow completion"
+  Analysis:
+    needs: [Builds]
+    uses: ./.github/workflows/analysis.yml
