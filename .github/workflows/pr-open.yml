@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   # https://github.com/bcgov-nr/action-builder-ghcr
-  builds:
+  Builds:
     if: "!github.event.pull_request.head.repo.fork"
     permissions:
       packages: write
@@ -40,7 +40,7 @@ jobs:
           triggers: ${{ matrix.package}}/${{ matrix.triggers }}
 
   ghcr-cleanup:
-    needs: [builds]
+    needs: [Builds]
     runs-on: ubuntu-22.04
     strategy:
       matrix:
@@ -53,6 +53,6 @@ jobs:
           min-versions-to-keep: 10
           delete-only-untagged-versions: 'true'
 
-  analysis:
-    needs: [builds]
+  Analysis:
+    needs: [Builds]
     uses: ./.github/workflows/analysis.yml
