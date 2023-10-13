@@ -12,6 +12,9 @@ concurrency:
 
 jobs:
   cleanup:
+    name: Untagged container cleanup
+    permissions:
+      packages: write
     runs-on: ubuntu-22.04
     strategy:
       matrix:
