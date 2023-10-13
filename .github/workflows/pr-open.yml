@@ -39,20 +39,6 @@ jobs:
           token: ${{ github.token }}
           triggers: ${{ matrix.package}}/${{ matrix.triggers }}
 
-  ghcr-cleanup:
-    needs: [Builds]
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        package: [bitnami/postgresql, postgres/postgres]
-    steps:
-      - uses: actions/delete-package-versions@v4
-        with:
-          package-name: ${{ github.event.repository.name }}/${{ matrix.package }}
-          package-type: 'container'
-          min-versions-to-keep: 10
-          delete-only-untagged-versions: 'true'
-
   Analysis:
     needs: [Builds]
     uses: ./.github/workflows/analysis.yml
