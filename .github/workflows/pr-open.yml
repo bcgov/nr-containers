@@ -53,10 +53,6 @@ jobs:
           min-versions-to-keep: 10
           delete-only-untagged-versions: 'true'
 
-  wrap-up:
+  analysis:
     needs: [ghcr-cleanup]
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Wrap-up
-        run: |
-          echo "Dummy step for workflow completion"
+    uses: ./.github/workflows/analysis.yml
