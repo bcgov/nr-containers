@@ -54,5 +54,5 @@ jobs:
           delete-only-untagged-versions: 'true'
 
   analysis:
-    needs: [ghcr-cleanup]
+    needs: [builds]
     uses: ./.github/workflows/analysis.yml
