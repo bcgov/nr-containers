@@ -12,14 +12,14 @@ concurrency:
 
 jobs:
   # https://github.com/bcgov-nr/action-builder-ghcr
-  builds:
+  postgres:
     if: "!github.event.pull_request.head.repo.fork"
     permissions:
       packages: write
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        package: [bitnami/postgres]
+        package: [bitnami/postgres, postgres/postgres]
         tag: [12, 13, 14, 15, 16]
     timeout-minutes: 10
     steps:
