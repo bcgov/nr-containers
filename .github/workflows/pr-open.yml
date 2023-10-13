@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        package: [bitnami/postgres, postgres/postgres]
+        package: [bitnami/postgresql, postgres/postgres]
         tag: [12, 13, 14, 15, 16]
     timeout-minutes: 10
     steps:
@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        package: [bitnami/postgres, postgres/postgres]
+        package: [bitnami/postgresql, postgres/postgres]
     steps:
       - uses: actions/delete-package-versions@v4
         with:
