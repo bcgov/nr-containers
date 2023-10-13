@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Get first tag
+      - name: Get tag
         id: tag
         run: |
           TAG=$(grep '^FROM' ${{ matrix.package }}/${{ matrix.tag }}/Dockerfile | cut -d':' -f2)
@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        package: [bitnami/postgres]
+        package: [bitnami/postgres, postgres/postgres]
     steps:
       - uses: actions/delete-package-versions@v4
         with:
