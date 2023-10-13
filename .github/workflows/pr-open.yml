@@ -12,7 +12,8 @@ concurrency:
 
 jobs:
   # https://github.com/bcgov-nr/action-builder-ghcr
-  Builds:
+  builds:
+    name: Builds
     if: "!github.event.pull_request.head.repo.fork"
     permissions:
       packages: write
@@ -39,6 +40,7 @@ jobs:
           token: ${{ github.token }}
           triggers: ${{ matrix.package}}/${{ matrix.triggers }}
 
-  Analysis:
-    needs: [Builds]
+  analysis:
+    name: Analysis
+    needs: [builds]
     uses: ./.github/workflows/analysis.yml

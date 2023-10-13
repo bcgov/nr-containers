@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ghcr-cleanup:
+  cleanup:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
