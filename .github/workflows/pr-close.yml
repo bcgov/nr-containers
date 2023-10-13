@@ -19,6 +19,7 @@ jobs:
     strategy:
       matrix:
         package: [bitnami/postgresql,bitnami/postgresql-ha,bitnami/pgpool, postgres/postgres]
+
     steps:
       - uses: actions/delete-package-versions@v4
         with:
