@@ -18,8 +18,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        package: [bitnami/postgresql,bitnami/postgresql-ha,bitnami/pgpool, postgres/postgres]
-
+        package: [bitnami/postgresql, bitnami/postgresql-ha, bitnami/pgpool, mongo, postgres]
     steps:
       - uses: actions/delete-package-versions@v4
         with:

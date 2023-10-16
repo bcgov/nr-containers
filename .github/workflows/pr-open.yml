@@ -19,11 +19,15 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        package: [bitnami/postgresql,bitnami/postgresql-ha, postgres/postgres]
+        package: [bitnami/postgresql, bitnami/postgresql-ha, postgres]
         tag: [12, 13, 14, 15, 16]
         include:
           - package: bitnami/pgpool
             tag: 4
+          - package: mongo
+            tag: 6
+          - package: mongo
+            tag: 7
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
