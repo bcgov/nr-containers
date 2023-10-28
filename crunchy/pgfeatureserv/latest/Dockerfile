@@ -1,2 +1,2 @@
-FROM pramsey/pg_tileserv:20231005
+FROM pramsey/pg_featureserv:20231017
 USER 1001
