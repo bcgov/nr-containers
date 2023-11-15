@@ -20,11 +20,23 @@ jobs:
         run: |
           # Get all Dockerfiles that have changed
           git fetch origin ${{ github.event.repository.default_branch }}
-          git diff --name-only origin/${{ github.event.repository.default_branch }}
+          DOCKERFILES=$(git diff --name-only origin/${{ github.event.repository.default_branch }} | grep -E '^[^/]+/[^/]+/Dockerfile$' | sort -u)
+          echo "dockerfiles=${DOCKERFILES}" >> $GITHUB_OUTPUT
+          echo -e "Dockerfiles: \n $DOCKERFILES"
 
-          # DOCKERFILES=$(git diff --name-only ${{ github.head_ref || github.ref_name }} ${{ github.event.repository.default_branch }} | grep -E '^[^/]+/[^/]+/Dockerfile$' | sort -u)
-          # echo "dockerfiles=${DOCKERFILES}" >> $GITHUB_OUTPUT
-          # echo -e "Dockerfiles: \n $DOCKERFILES"
+  parse:
+    name: Parse Dockerfiles
+    needs: [scrub]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse Dockerfiles
+        id: parse
+        run: |
+          # Parse the Dockerfiles
+          echo "Dockerfiles?"
+          echo ${{ needs.scrub.outputs.dockerfiles }}}
+
 
   # # https://github.com/bcgov-nr/action-builder-ghcr
   # builds:
