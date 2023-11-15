@@ -66,12 +66,11 @@ jobs:
           echo "full_tag=${TAG}" >> $GITHUB_OUTPUT
 
       - name: Build or import
-        uses: bcgov-nr/action-builder-ghcr@v1.3.0
+        uses: bcgov-nr/action-builder-ghcr@v2.0.0
         with:
           build_context: ${{ matrix.package }}/${{ matrix.major_tag }}
           package: ${{ matrix.package }}
           tag: ${{ steps.tag.outputs.full_tag }}
-          token: ${{ github.token }}
           triggers: ${{ matrix.package}}/${{ matrix.triggers }}
 
   pr-description-add:
