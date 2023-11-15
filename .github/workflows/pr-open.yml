@@ -74,7 +74,20 @@ jobs:
           token: ${{ github.token }}
           triggers: ${{ matrix.package}}/${{ matrix.triggers }}
 
-  analysis:
-    name: Analysis
+  pr-description-add:
+    name: PR Description Add
     needs: [builds]
-    uses: ./.github/workflows/analysis.yml
+    runs-on: ubuntu-22.04
+    permissions:
+      pull-requests: write
+    timeout-minutes: 1
+    steps:
+      - uses: bcgov-nr/action-pr-description-add@v1.1.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          add_markdown: |
+            ---
+
+            Thanks for the PR!
+
+            Any new images should be viewable with [our repo packages](https://github.com/orgs/bcgov/packages?repo_name=nr-containers).  :)
