@@ -45,8 +45,3 @@ jobs:
           tag: ${{ steps.tag.outputs.tag }}
           token: ${{ github.token }}
           triggers: ${{ matrix.package}}/${{ matrix.triggers }}
-
-  analysis:
-    name: Analysis
-    needs: [builds]
-    uses: ./.github/workflows/analysis.yml
