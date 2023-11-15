@@ -19,9 +19,11 @@ jobs:
         id: dockerfiles
         run: |
           # Get all Dockerfiles that have changed
-          DOCKERFILES=$(git diff --name-only ${{ github.head_ref || github.ref_name }} ${{ github.event.repository.default_branch }} | grep -E '^[^/]+/[^/]+/Dockerfile$' | sort -u)
-          echo "dockerfiles=${DOCKERFILES}" >> $GITHUB_OUTPUT
-          echo -e "Dockerfiles: \n $DOCKERFILES"
+          git diff --name-only ${{ github.head_ref || github.ref_name }} ${{ github.event.repository.default_branch }}
+
+          # DOCKERFILES=$(git diff --name-only origin/${{ github.head_ref || github.ref_name }} ${{ github.event.repository.default_branch }} | grep -E '^[^/]+/[^/]+/Dockerfile$' | sort -u)
+          # echo "dockerfiles=${DOCKERFILES}" >> $GITHUB_OUTPUT
+          # echo -e "Dockerfiles: \n $DOCKERFILES"
 
   # # https://github.com/bcgov-nr/action-builder-ghcr
   # builds:
