@@ -20,7 +20,7 @@ jobs:
       - name: Get Dockerfiles
         id: dockerfiles
         run: |
-          git diff --name-only origin/feat/smartWorkflows origin/main
+          git diff --name-only origin/main
 
           # Get all Dockerfiles that have changed
           # git fetch origin ${{ inputs.diff_branch }}
