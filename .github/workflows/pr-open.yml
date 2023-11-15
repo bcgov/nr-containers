@@ -19,29 +19,57 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        package: [bitnami/postgresql, bitnami/postgresql-ha, postgres]
-        tag: [12, 13, 14, 15, 16]
         include:
           - package: bitnami/pgpool
-            tag: 4
+            major_tag: 4
+          - package: bitnami/postgresql
+            major_tag: 12
+          - package: bitnami/postgresql
+            major_tag: 13
+          - package: bitnami/postgresql
+            major_tag: 14
+          - package: bitnami/postgresql
+            major_tag: 15
+          - package: bitnami/postgresql
+            major_tag: 16
+          - package: bitnami/postgresql-ha
+            major_tag: 12
+          - package: bitnami/postgresql-ha
+            major_tag: 13
+          - package: bitnami/postgresql-ha
+            major_tag: 14
+          - package: bitnami/postgresql-ha
+            major_tag: 15
+          - package: bitnami/postgresql-ha
+            major_tag: 16
           - package: mongo
-            tag: 6
+            major_tag: 6
           - package: mongo
-            tag: 7
+            major_tag: 7
+          - package: postgres
+            major_tag: 12
+          - package: postgres
+            major_tag: 13
+          - package: postgres
+            major_tag: 14
+          - package: postgres
+            major_tag: 15
+          - package: postgres
+            major_tag: 16
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Get tag
         id: tag
         run: |
-          TAG=$(grep '^FROM' ${{ matrix.package }}/${{ matrix.tag }}/Dockerfile | cut -d':' -f2)
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          TAG=$(grep '^FROM' ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile | cut -d':' -f2)
+          echo "full_tag=${TAG}" >> $GITHUB_OUTPUT
 
       - name: Build or import
         uses: bcgov-nr/action-builder-ghcr@v1.3.0
         with:
-          build_context: ${{ matrix.package }}/${{ matrix.tag }}
+          build_context: ${{ matrix.package }}/${{ matrix.major_tag }}
           package: ${{ matrix.package }}
-          tag: ${{ steps.tag.outputs.tag }}
+          tag: ${{ steps.tag.outputs.full_tag }}
           token: ${{ github.token }}
           triggers: ${{ matrix.package}}/${{ matrix.triggers }}
