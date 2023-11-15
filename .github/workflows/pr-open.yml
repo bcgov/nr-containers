@@ -71,7 +71,6 @@ jobs:
           build_context: ${{ matrix.package }}/${{ matrix.major_tag }}
           package: ${{ matrix.package }}
           tag: ${{ steps.tag.outputs.full_tag }}
-          token: ${{ github.token }}
           triggers: ${{ matrix.package}}/${{ matrix.triggers }}
 
   pr-description-add:
