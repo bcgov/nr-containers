@@ -20,7 +20,7 @@ jobs:
         run: |
           # Get all Dockerfiles that have changed
           git fetch origin ${{ github.event.repository.default_branch }}
-          DOCKERFILES=$(git diff --name-only ${{ github.event.repository.default_branch }} | grep -E '^[^/]+/[^/]+/Dockerfile$' | sort -u)
+          DOCKERFILES=$(git diff --name-only origin/${{ github.event.repository.default_branch }} | grep -E '^[^/]+/[^/]+/Dockerfile$' | sort -u)
           echo "dockerfiles=${DOCKERFILES}" >> $GITHUB_OUTPUT
           echo -e "Dockerfiles: \n $DOCKERFILES"
 
