@@ -32,7 +32,9 @@ jobs:
           # Clip extra comma and send to output
           ONELINE=$(echo $LIST)
           JSON=$(echo $ONELINE | sed 's/\(.*\),/\1 /')
+          echo "json=${JSON}" | sed 's/"/\\"/g'
           echo "json=${JSON}" | sed 's/"/\\"/g' >> $GITHUB_OUTPUT
+          echo "test=win" >> $GITHUB_OUTPUT
 
   parse:
     name: Parse Dockerfiles
@@ -43,7 +45,7 @@ jobs:
         id: parse
         run: |
           # Parse the Dockerfiles
-          echo ${{ needs.scrub.outputs.json }}
+          echo ${{ needs.scrub.outputs.test }}
 
 
   # # https://github.com/bcgov-nr/action-builder-ghcr
