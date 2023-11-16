@@ -31,7 +31,7 @@ jobs:
             echo -e "]"
           )
           # Clip extra comma and send to output
-          echo "json=${JSON}"" | sed 's/\(.*\),/\1 /'
+          echo "json=${JSON}" | sed 's/\(.*\),/\1 /'
           echo "json=${JSON}" | sed 's/\(.*\),/\1 /' >> $GITHUB_OUTPUT
 
   # parse:
