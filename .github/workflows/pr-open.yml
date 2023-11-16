@@ -43,7 +43,7 @@ jobs:
         id: parse
         run: |
           # Parse the Dockerfiles
-          echo ${{ fromJSON(needs.scrub.outputs.json) }}
+          echo ${{ needs.scrub.outputs.json }}
 
 
   # # https://github.com/bcgov-nr/action-builder-ghcr
