@@ -31,8 +31,8 @@ jobs:
             echo -e "]"
           )
           # Clip extra comma and send to output
-          JSON=$(echo "json=${LIST}" | sed 's/\(.*\),/\1 /')
-          echo "JSON=${JSON}"
+          ONELINE=$(echo $LIST)
+          JSON=$(echo $ONELINE | sed 's/\(.*\),/\1 /')
           echo "json=${JSON}" | sed 's/"/\\"/g' >> $GITHUB_OUTPUT
 
   # parse:
