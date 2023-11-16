@@ -24,20 +24,16 @@ jobs:
           git fetch origin ${{ github.event.repository.default_branch }}
 
           # Get changed Dockerfiles, create JSON object for the builder
+          DOCKERFILES=($(git diff --name-only origin/${{ github.event.repository.default_branch }} | grep -E '^.*/.*/Dockerfile$' | sort -u))
           LIST=$(
-            while read -r d; do
+            for d in "${DOCKERFILES[@]}"; do
               BASE=${d%/*}
               echo "{\"package\": \"${BASE%/*}\", \"major_tag\": \"${BASE##*/}\"},"
-            done < <( \
-              git diff --name-only origin/${{ github.event.repository.default_branch }} \
-                | grep -E '^.*/.*/Dockerfile$' \
-                | sort -u \
-            )
+            done
           )
 
           # Clip extra comma and send to output
           JSON=$(echo [$LIST] | sed 's/\(.*\),/\1/')
-
           echo "json=${JSON}"
           echo "json=${JSON}" >> $GITHUB_OUTPUT
 
