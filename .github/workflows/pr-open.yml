@@ -31,21 +31,21 @@ jobs:
             echo -e "]"
           )
           # Clip extra comma and send to output
-          echo "json=${JSON} | sed 's/\(.*\),/\1 /'"
-          echo "json=${JSON} | sed 's/\(.*\),/\1 /'" >> $GITHUB_OUTPUT
+          echo "json=${JSON}"" | sed 's/\(.*\),/\1 /'
+          echo "json=${JSON}" | sed 's/\(.*\),/\1 /' >> $GITHUB_OUTPUT
 
-  parse:
-    name: Parse Dockerfiles
-    needs: [scrub]
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Parse Dockerfiles
-        id: parse
-        run: |
-          # Parse the Dockerfiles
-          echo "Dockerfiles?"
-          echo ${{ fromJSON(needs.scrub.outputs.dockerfiles) }}
+  # parse:
+  #   name: Parse Dockerfiles
+  #   needs: [scrub]
+  #   runs-on: ubuntu-22.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Parse Dockerfiles
+  #       id: parse
+  #       run: |
+  #         # Parse the Dockerfiles
+  #         echo "Dockerfiles?"
+  #         echo ${{ fromJSON(needs.scrub.outputs.dockerfiles) }}
 
 
   # # https://github.com/bcgov-nr/action-builder-ghcr
