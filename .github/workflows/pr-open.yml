@@ -32,6 +32,7 @@ jobs:
           )
           # Clip extra comma and send to output
           JSON=$(echo "json=${LIST}" | sed 's/\(.*\),/\1 /')
+          echo "JSON=${JSON}"
           echo "json=${JSON}" | sed 's/"/\\"/g' >> $GITHUB_OUTPUT
 
   # parse:
