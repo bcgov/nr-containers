@@ -25,18 +25,15 @@ jobs:
 
           # Get all Dockerfiles that have changed
           LIST=$(
-            echo "["
             while read -r d; do
               # Clip off /Dockerfile and use the rest to handle package name and major tag
               BASE=${d%/*}
               echo "{\"package\": \"${BASE%/*}\", \"major_tag\": \"${BASE##*/}\"},"
             done < <(git diff --name-only origin/${{ github.event.repository.default_branch }} | grep -E '^.*/.*/Dockerfile$' | sort -u)
-            echo "]"
           )
 
           # Clip extra comma and send to output
-          ONELINE=$(echo $LIST)
-          JSON=$(echo $ONELINE | sed 's/\(.*\),/\1/')
+          JSON=$(echo [$LIST] | sed 's/\(.*\),/\1/')
 
           echo "json=${JSON}"
           echo "json=${JSON}" >> $GITHUB_OUTPUT
