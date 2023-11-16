@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        include: ${{ fromJSON(needs.scrub.outputs.json) }}
+        include: ${{ needs.scrub.outputs.json }}
         # include: [ {"package": "bitnami/postgresql", "major_tag": "12"}, {"package": "bitnami/postgresql", "major_tag": "13"}, {"package": "bitnami/postgresql", "major_tag": "14"}, {"package": "bitnami/postgresql", "major_tag": "15"}, {"package": "bitnami/postgresql", "major_tag": "16"} ]
     timeout-minutes: 10
     steps:
