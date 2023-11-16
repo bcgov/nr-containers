@@ -3,8 +3,10 @@ name: Analysis
 on:
   push:
     branches: [main]
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
   schedule: [cron: "0 11 * * 0"] # 3 AM PST = 12 PM UDT, runs sundays
-  workflow_call:
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -14,6 +16,7 @@ jobs:
   # https://github.com/marketplace/actions/aqua-security-trivy
   trivy:
     name: Trivy
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-22.04
     timeout-minutes: 1
     steps:
