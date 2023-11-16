@@ -37,7 +37,7 @@ jobs:
           ONELINE=$(echo $LIST)
           JSON=$(echo $ONELINE | sed 's/\(.*\),/\1 /')
           echo "json=${JSON}"
-          echo "json=${JSON}" | sed 's/"/\\"/g' >> $GITHUB_OUTPUT
+          echo "json=${JSON}" >> $GITHUB_OUTPUT
           echo "test=win" >> $GITHUB_OUTPUT
 
   # parse:
