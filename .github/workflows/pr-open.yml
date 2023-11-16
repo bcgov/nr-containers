@@ -14,11 +14,12 @@ jobs:
     name: Scrub for changed Dockerfiles
     runs-on: ubuntu-22.04
     outputs:
-      json: ${{ steps.get-dockerfiles.outputs.json }}
-      test: ${{ steps.get-dockerfiles.outputs.test }}
+      json: ${{ steps.dockerfiles.outputs.json }}
+      test: ${{ steps.dockerfiles.outputs.test }}
     steps:
       - uses: actions/checkout@v4
       - name: Get Dockerfiles
+        id: dockerfiles
         run: |
           # Get all Dockerfiles that have changed
           git fetch origin ${{ github.event.repository.default_branch }}
