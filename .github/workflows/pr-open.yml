@@ -36,86 +36,51 @@ jobs:
           # Clip extra comma and send to output
           ONELINE=$(echo $LIST)
           JSON=$(echo $ONELINE | sed 's/\(.*\),/\1 /')
-          echo "json=${JSON}" | sed 's/"/\\"/g'
+          echo "json=${JSON}"
           echo "json=${JSON}" | sed 's/"/\\"/g' >> $GITHUB_OUTPUT
           echo "test=win" >> $GITHUB_OUTPUT
 
-  parse:
-    name: Parse Dockerfiles
-    needs: [scrub]
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Parse Dockerfiles
-        id: parse
-        run: |
-          # Parse the Dockerfiles
-          echo ${{ needs.scrub.outputs.test }}
-          echo ${{ needs.scrub.outputs.json }}
-          echo ${{ toJSON(needs.scrub.outputs.json) }}
-
-
-  # # https://github.com/bcgov-nr/action-builder-ghcr
-  # builds:
-  #   name: Builds
-  #   if: "!github.event.pull_request.head.repo.fork"
-  #   permissions:
-  #     packages: write
+  # parse:
+  #   name: Parse Dockerfiles
+  #   needs: [scrub]
   #   runs-on: ubuntu-22.04
-  #   strategy:
-  #     matrix:
-  #       include:
-  #         - package: bitnami/pgpool
-  #           major_tag: 4
-  #         - package: bitnami/postgresql
-  #           major_tag: 12
-  #         - package: bitnami/postgresql
-  #           major_tag: 13
-  #         - package: bitnami/postgresql
-  #           major_tag: 14
-  #         - package: bitnami/postgresql
-  #           major_tag: 15
-  #         - package: bitnami/postgresql
-  #           major_tag: 16
-  #         - package: bitnami/postgresql-ha
-  #           major_tag: 12
-  #         - package: bitnami/postgresql-ha
-  #           major_tag: 13
-  #         - package: bitnami/postgresql-ha
-  #           major_tag: 14
-  #         - package: bitnami/postgresql-ha
-  #           major_tag: 15
-  #         - package: bitnami/postgresql-ha
-  #           major_tag: 16
-  #         - package: mongo
-  #           major_tag: 6
-  #         - package: mongo
-  #           major_tag: 7
-  #         - package: postgres
-  #           major_tag: 12
-  #         - package: postgres
-  #           major_tag: 13
-  #         - package: postgres
-  #           major_tag: 14
-  #         - package: postgres
-  #           major_tag: 15
-  #         - package: postgres
-  #           major_tag: 16
-  #   timeout-minutes: 10
   #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Get tag
-  #       id: tag
+  #     - name: Parse Dockerfiles
+  #       id: parse
   #       run: |
-  #         TAG=$(grep '^FROM' ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile | cut -d':' -f2)
-  #         echo "full_tag=${TAG}" >> $GITHUB_OUTPUT
+  #         # Parse the Dockerfiles
+  #         echo ${{ needs.scrub.outputs.test }}
+  #         echo ${{ needs.scrub.outputs.json }}
+  #         echo ${{ toJSON(needs.scrub.outputs.json) }}
 
-  #     - name: Build or import
-  #       uses: bcgov-nr/action-builder-ghcr@v2.0.0
-  #       with:
-  #         build_context: ${{ matrix.package }}/${{ matrix.major_tag }}
-  #         package: ${{ matrix.package }}
-  #         tag: ${{ steps.tag.outputs.full_tag }}
-  #         triggers: ${{ matrix.package}}/${{ matrix.triggers }}
+
+  # https://github.com/bcgov-nr/action-builder-ghcr
+  builds:
+    name: Builds
+    needs: [scrub]
+    if: "!github.event.pull_request.head.repo.fork"
+    permissions:
+      packages: write
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        include: ${{ toJSON(needs.scrub.outputs.json) }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get tag
+        id: tag
+        run: |
+          TAG=$(grep '^FROM' ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile | cut -d':' -f2)
+          echo "full_tag=${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Build or import
+        uses: bcgov-nr/action-builder-ghcr@v2.0.0
+        with:
+          build_context: ${{ matrix.package }}/${{ matrix.major_tag }}
+          package: ${{ matrix.package }}
+          tag: ${{ steps.tag.outputs.full_tag }}
+          triggers: ${{ matrix.package}}/${{ matrix.triggers }}
 
   # pr-description-add:
   #   name: PR Description Add
