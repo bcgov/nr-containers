@@ -50,6 +50,8 @@ jobs:
         run: |
           # Parse the Dockerfiles
           echo ${{ needs.scrub.outputs.test }}
+          echo ${{ needs.scrub.outputs.json }}
+          echo ${{ toJSON(needs.scrub.outputs.json) }}
 
 
   # # https://github.com/bcgov-nr/action-builder-ghcr
