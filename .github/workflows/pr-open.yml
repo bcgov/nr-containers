@@ -20,7 +20,7 @@ jobs:
         run: |
           # Get all Dockerfiles that have changed
           git fetch origin ${{ github.event.repository.default_branch }}
-          DOCKERFILES=($(git diff --name-only main | grep Dockerfile))
+          DOCKERFILES=($(git diff --name-only origin/${{ github.event.repository.default_branch }} | grep -E '^.*/.*/Dockerfile$' | sort -u))
           JSON=$(echo "["
             for d in "${DOCKERFILES[@]}"; do
               BASE=${d%/*}
@@ -44,7 +44,7 @@ jobs:
         run: |
           # Parse the Dockerfiles
           echo "Dockerfiles?"
-          echo ${{ needs.scrub.outputs.json }}
+          echo ${{ needs.scrub.outputs.dockerfiles }}
 
 
   # # https://github.com/bcgov-nr/action-builder-ghcr
