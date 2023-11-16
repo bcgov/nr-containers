@@ -23,13 +23,16 @@ jobs:
           # Fetch default_branch (usually main)
           git fetch origin ${{ github.event.repository.default_branch }}
 
-          # Get all Dockerfiles that have changed
+          # Get changed Dockerfiles, create JSON object for the builder
           LIST=$(
             while read -r d; do
-              # Clip off /Dockerfile and use the rest to handle package name and major tag
               BASE=${d%/*}
               echo "{\"package\": \"${BASE%/*}\", \"major_tag\": \"${BASE##*/}\"},"
-            done < <(git diff --name-only origin/${{ github.event.repository.default_branch }} | grep -E '^.*/.*/Dockerfile$' | sort -u)
+            done < <( \
+              git diff --name-only origin/${{ github.event.repository.default_branch }} \
+                | grep -E '^.*/.*/Dockerfile$' \
+                | sort -u \
+            )
           )
 
           # Clip extra comma and send to output
@@ -66,20 +69,20 @@ jobs:
           tag: ${{ steps.tag.outputs.full_tag }}
           triggers: ${{ matrix.package}}/${{ matrix.triggers }}
 
-  # pr-description-add:
-  #   name: PR Description Add
-  #   needs: [builds]
-  #   runs-on: ubuntu-22.04
-  #   permissions:
-  #     pull-requests: write
-  #   timeout-minutes: 1
-  #   steps:
-  #     - uses: bcgov-nr/action-pr-description-add@v1.1.0
-  #       with:
-  #         github_token: ${{ secrets.GITHUB_TOKEN }}
-  #         add_markdown: |
-  #           ---
+  pr-description-add:
+    name: PR Description Add
+    needs: [builds]
+    runs-on: ubuntu-22.04
+    permissions:
+      pull-requests: write
+    timeout-minutes: 1
+    steps:
+      - uses: bcgov-nr/action-pr-description-add@v1.1.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          add_markdown: |
+            ---
 
-  #           Thanks for the PR!
+            Thanks for the PR!
 
-  #           Any new images should be viewable with [our repo packages](https://github.com/orgs/bcgov/packages?repo_name=nr-containers).  :)
+            Any new images should be viewable with [our repo packages](https://github.com/orgs/bcgov/packages?repo_name=nr-containers).  :)
