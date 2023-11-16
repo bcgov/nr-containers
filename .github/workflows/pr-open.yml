@@ -29,7 +29,7 @@ jobs:
               BASE=${d%/*}
               VERSION=${BASE##*/}
               PACKAGE=${BASE%/*}
-              echo -e "{\"package\": \"$PACKAGE\", \"major_tag\": \"$VERSION\"},"
+              echo -e "{"package": "$PACKAGE", "major_tag": "$VERSION"},"
             done
             echo -e "]"
           )
