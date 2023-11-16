@@ -35,18 +35,18 @@ jobs:
           JSON=$(echo $ONELINE | sed 's/\(.*\),/\1 /')
           echo "json=${JSON}" | sed 's/"/\\"/g' >> $GITHUB_OUTPUT
 
-  # parse:
-  #   name: Parse Dockerfiles
-  #   needs: [scrub]
-  #   runs-on: ubuntu-22.04
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Parse Dockerfiles
-  #       id: parse
-  #       run: |
-  #         # Parse the Dockerfiles
-  #         echo "Dockerfiles?"
-  #         echo ${{ fromJSON(needs.scrub.outputs.dockerfiles) }}
+  parse:
+    name: Parse Dockerfiles
+    needs: [scrub]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse Dockerfiles
+        id: parse
+        run: |
+          # Parse the Dockerfiles
+          echo "Dockerfiles?"
+          echo ${{ fromJSON(needs.scrub.outputs.dockerfiles) }}
 
 
   # # https://github.com/bcgov-nr/action-builder-ghcr
