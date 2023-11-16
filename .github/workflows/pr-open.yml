@@ -27,9 +27,7 @@ jobs:
             for d in "${DOCKERFILES[@]}"; do
               # Clip off /Dockerfile and use the rest to handle package name and major tag
               BASE=${d%/*}
-              VERSION=${BASE##*/}
-              PACKAGE=${BASE%/*}
-              echo "{\"package\": \"$PACKAGE\", \"major_tag\": \"$VERSION\"},"
+              echo "{\"package\": \"${BASE%/*}\", \"major_tag\": \"${BASE##*/}\"},"
             done
             echo "]"
           )
@@ -50,7 +48,6 @@ jobs:
     strategy:
       matrix:
         include: ${{ fromJSON(needs.scrub.outputs.json) }}
-        # include: [ {"package": "bitnami/postgresql", "major_tag": "12"}, {"package": "bitnami/postgresql", "major_tag": "13"}, {"package": "bitnami/postgresql", "major_tag": "14"}, {"package": "bitnami/postgresql", "major_tag": "15"}, {"package": "bitnami/postgresql", "major_tag": "16"} ]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
