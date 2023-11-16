@@ -27,7 +27,9 @@ jobs:
             for d in "${DOCKERFILES[@]}"; do
               # Clip off /Dockerfile and use the rest to handle package name and major tag
               BASE=${d%/*}
-              echo "{\"package\": ${BASE%/*}\", \"major_tag\": \"${BASE##*/}\"},"
+              VERSION=${BASE##*/}
+              PACKAGE=${BASE%/*}
+              echo "{\"package\": \"$PACKAGE\", \"major_tag\": \"$VERSION\"},"
             done
             echo "]"
           )
