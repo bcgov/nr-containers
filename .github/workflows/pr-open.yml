@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       json: ${{ steps.dockerfiles.outputs.json }}
-      test: ${{ steps.dockerfiles.outputs.test }}
     steps:
       - uses: actions/checkout@v4
       - name: Get Dockerfiles
@@ -26,33 +25,17 @@ jobs:
           DOCKERFILES=($(git diff --name-only origin/${{ github.event.repository.default_branch }} | grep -E '^.*/.*/Dockerfile$' | sort -u))
           LIST=$(echo "["
             for d in "${DOCKERFILES[@]}"; do
+              # Clip off /Dockerfile and use the rest to handle package name and major tag
               BASE=${d%/*}
-              VERSION=${BASE##*/}
-              PACKAGE=${BASE%/*}
-              echo -e "{\"package\": \"$PACKAGE\", \"major_tag\": \"$VERSION\"},"
+              echo "{\"package\": ${BASE%/*}\", \"major_tag\": \"${BASE##*/}\"},"
             done
-            echo -e "]"
+            echo "]"
           )
           # Clip extra comma and send to output
           ONELINE=$(echo $LIST)
           JSON=$(echo $ONELINE | sed 's/\(.*\),/\1/')
           echo "json=${JSON}"
           echo "json=${JSON}" >> $GITHUB_OUTPUT
-          echo test=win >> $GITHUB_OUTPUT
-
-  # parse:
-  #   name: Parse Dockerfiles
-  #   needs: [scrub]
-  #   runs-on: ubuntu-22.04
-  #   steps:
-  #     - name: Parse Dockerfiles
-  #       id: parse
-  #       run: |
-  #         # Parse the Dockerfiles
-  #         echo ${{ needs.scrub.outputs.test }}
-  #         echo ${{ needs.scrub.outputs.json }}
-  #         echo ${{ toJSON(needs.scrub.outputs.json) }}
-
 
   # https://github.com/bcgov-nr/action-builder-ghcr
   builds:
