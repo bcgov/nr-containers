@@ -10,52 +10,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  scrub:
+    name: Scrub for changed Dockerfiles
+    runs-on: ubuntu-22.04
+    outputs:
+      json: ${{ steps.dockerfiles.outputs.json }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get Dockerfiles
+        id: dockerfiles
+        run: |
+          # Fetch default_branch (usually main)
+          git fetch origin ${{ github.event.repository.default_branch }}
+
+          # Get changed Dockerfiles, create JSON object for the builder
+          DOCKERFILES=($(git diff --name-only origin/${{ github.event.repository.default_branch }} | grep -E '^.*/.*/Dockerfile$' | sort -u))
+          LIST=$(
+            for d in "${DOCKERFILES[@]}"; do
+              BASE=${d%/*}
+              echo "{\"package\": \"${BASE%/*}\", \"major_tag\": \"${BASE##*/}\"},"
+            done
+          )
+
+          # Clip extra comma and send to output
+          JSON=$(echo [$LIST] | sed 's/\(.*\),/\1/')
+          echo "json=${JSON}"
+          echo "json=${JSON}" >> $GITHUB_OUTPUT
+
   # https://github.com/bcgov-nr/action-builder-ghcr
   builds:
     name: Builds
+    needs: [scrub]
     if: "!github.event.pull_request.head.repo.fork"
     permissions:
       packages: write
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        include:
-          - package: bitnami/pgpool
-            major_tag: 4
-          - package: bitnami/postgresql
-            major_tag: 12
-          - package: bitnami/postgresql
-            major_tag: 13
-          - package: bitnami/postgresql
-            major_tag: 14
-          - package: bitnami/postgresql
-            major_tag: 15
-          - package: bitnami/postgresql
-            major_tag: 16
-          - package: bitnami/postgresql-ha
-            major_tag: 12
-          - package: bitnami/postgresql-ha
-            major_tag: 13
-          - package: bitnami/postgresql-ha
-            major_tag: 14
-          - package: bitnami/postgresql-ha
-            major_tag: 15
-          - package: bitnami/postgresql-ha
-            major_tag: 16
-          - package: mongo
-            major_tag: 6
-          - package: mongo
-            major_tag: 7
-          - package: postgres
-            major_tag: 12
-          - package: postgres
-            major_tag: 13
-          - package: postgres
-            major_tag: 14
-          - package: postgres
-            major_tag: 15
-          - package: postgres
-            major_tag: 16
+        include: ${{ fromJSON(needs.scrub.outputs.json) }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
