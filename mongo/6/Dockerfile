@@ -1,4 +1,4 @@
-FROM mongo:6.0.11
+FROM mongo:6
 
 # Health check
 HEALTHCHECK --interval=15s --timeout=5s --retries=3 CMD ["mongosh", "--eval", "db.adminCommand('ping')"]
