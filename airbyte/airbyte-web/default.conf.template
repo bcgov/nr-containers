@@ -1,0 +1,77 @@
+upstream api-server {
+    server $INTERNAL_API_HOST;
+}
+
+upstream connector-builder-server {
+   server $CONNECTOR_BUILDER_API_HOST;
+}
+
+upstream keycloak {
+    server $KEYCLOAK_INTERNAL_HOST;
+}
+
+server {
+    listen       8080;
+    listen  [::]:8080;
+    server_name  localhost;
+
+    add_header Content-Security-Policy "script-src * 'unsafe-inline'; worker-src 'self' blob:;";
+
+    location / {
+        root   /usr/share/nginx/html;
+        
+        location ~ ^/docs/.* {
+            try_files $uri $uri/ =404;
+        }
+
+        location ~ ^/(?!(assets/.*)) {
+            try_files $uri $uri/ /index.html;
+        }
+
+        # (Developer Note): Please only add new properties to this, if they really need to be configurable
+        #                   by a user at runtime i.e. without rebuilding the docker images. General webapp config
+        #                   belongs in an environment file.
+        sub_filter </head>
+                '<script data-script="config-overwrites">
+                window.TRACKING_STRATEGY = "$TRACKING_STRATEGY";
+                </script></head>';
+        sub_filter_once on;
+    }
+
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+
+    location /api/ {
+        fastcgi_read_timeout 1h;
+        proxy_read_timeout 1h;
+        client_max_body_size 200M;
+        proxy_pass http://api-server/api/;
+
+        # Unset X-Airbyte-Auth header so that it cannot be used by external requests for authentication
+        proxy_set_header X-Airbyte-Auth "";
+    }
+
+    location /connector-builder-api/ {
+        fastcgi_read_timeout 1h;
+        proxy_read_timeout 1h;
+        client_max_body_size 200M;
+        proxy_pass http://connector-builder-server/;
+    }
+
+    location /auth/ {
+        # Block access to anything not under /auth/realms or /auth/resources
+        location ~ "/auth/(?!(realms|resources).*)" {
+            return 404;
+        }
+        proxy_set_header    Host               $host;
+        proxy_set_header    X-Real-IP          $remote_addr;
+        proxy_set_header    X-Forwarded-For    $proxy_add_x_forwarded_for;
+        proxy_set_header    X-Forwarded-Host   $host;
+        proxy_set_header    X-Forwarded-Server $host;
+        proxy_set_header    X-Forwarded-Proto  $scheme;
+        proxy_hide_header   Content-Security-Policy;
+        proxy_pass http://keycloak/auth/;
+    }
+}
