@@ -68,6 +68,7 @@ jobs:
   pr-description-add:
     name: PR Description Add
     needs: [builds]
+    if: always()
     runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
