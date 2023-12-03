@@ -32,16 +32,22 @@ jobs:
             done
           )
 
-          # Clip extra comma and send to output
+          # Clip any trailing commas
           JSON=$(echo [$LIST] | sed 's/\(.*\),/\1/')
+
+          # Send to output if non-empty
           echo "json=${JSON}"
-          echo "json=${JSON}" >> $GITHUB_OUTPUT
+          if ["${json}" != "[]"]
+          then
+            echo "json=${JSON}" >> $GITHUB_OUTPUT
+          fi
 
   # https://github.com/bcgov-nr/action-builder-ghcr
   builds:
     name: Builds
     needs: [scrub]
-    if: "!github.event.pull_request.head.repo.fork"
+    # if: "!github.event.pull_request.head.repo.fork"
+    if: ${{ needs.scrub.outputs.json }}
     permissions:
       packages: write
     runs-on: ubuntu-22.04
