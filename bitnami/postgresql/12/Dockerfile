@@ -1,5 +1,3 @@
-moo oink bah
-
 FROM bitnami/postgresql:12.17.0
 
 # Health check and non-privileged user
