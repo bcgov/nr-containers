@@ -37,7 +37,7 @@ jobs:
 
           # Send to output if non-empty
           echo "json=${JSON}"
-          if [ "${#json}" -gt 4 ]
+          if [ "${#JSON}" -gt 4 ]
           then
             echo "json=${JSON}" >> $GITHUB_OUTPUT
             echo "sent to output!"
