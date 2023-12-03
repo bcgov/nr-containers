@@ -40,6 +40,9 @@ jobs:
           if [ "${#json}" -gt 4 ]
           then
             echo "json=${JSON}" >> $GITHUB_OUTPUT
+            echo "sent to output!"
+          else
+            echo "no Dockerfiles changed"
           fi
 
   # https://github.com/bcgov-nr/action-builder-ghcr
