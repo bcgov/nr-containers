@@ -46,7 +46,6 @@ jobs:
   builds:
     name: Builds
     needs: [scrub]
-    # if: "!github.event.pull_request.head.repo.fork"
     if: ${{ needs.scrub.outputs.json }}
     permissions:
       packages: write
