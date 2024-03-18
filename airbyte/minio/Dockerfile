@@ -1,4 +1,4 @@
-FROM minio/mc
+FROM minio/mc:latest
 
 RUN mkdir /.mc
 
