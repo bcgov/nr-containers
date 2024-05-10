@@ -1,4 +1,4 @@
-FROM postgres:12.18
+FROM postgres:12.19
 
 # Health check and non-privileged user
 HEALTHCHECK --interval=15s --timeout=5s --retries=3 CMD [ "pg_isready" ]

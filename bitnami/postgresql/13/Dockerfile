@@ -1,4 +1,4 @@
-FROM bitnami/postgresql:13.14.0
+FROM bitnami/postgresql:13.15.0
 
 # Health check and non-privileged user
 HEALTHCHECK --interval=15s --timeout=5s --retries=3 CMD [ "pg_isready" ]
