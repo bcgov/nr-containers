@@ -73,6 +73,8 @@ jobs:
     name: PR Description Add
     needs: [scrub, builds]
     if: always() && (!failure()) && (!cancelled())
+    env:
+      BUILD_OBJECT: fromJSON(needs.scrub.outputs.json)
     runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
@@ -88,4 +90,4 @@ jobs:
 
             Any new images should be viewable with [our repo packages](https://github.com/orgs/bcgov/packages?repo_name=nr-containers).  :)
 
-            Build object: ${{ fromJSON(needs.scrub.outputs.json) }}
+            Build object: ${{ env.BUILD_OBJECT }}
