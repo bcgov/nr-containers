@@ -10,23 +10,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  pr-description-add:
-    name: PR Description Add
-    runs-on: ubuntu-22.04
-    permissions:
-      pull-requests: write
-    timeout-minutes: 1
-    steps:
-      - uses: bcgov-nr/action-pr-description-add@v1.1.1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          add_markdown: |
-            ---
-
-            Thanks for the PR!
-
-            Any new images should be viewable with [our repo packages](https://github.com/orgs/bcgov/packages?repo_name=nr-containers).  :)
-
   scrub:
     name: Scrub for changed Dockerfiles
     runs-on: ubuntu-22.04
@@ -86,10 +69,23 @@ jobs:
           package: ${{ matrix.package }}
           tag: ${{ steps.tag.outputs.full_tag }}
 
-  results:
-    name: PR Results
-    needs: [builds]
+  pr-description-add:
+    name: PR Description Add
+    needs: [scrub, builds]
     if: always() && (!failure()) && (!cancelled())
     runs-on: ubuntu-22.04
+    permissions:
+      pull-requests: write
+    timeout-minutes: 1
     steps:
-      - run: echo "Success!"
+      - uses: bcgov-nr/action-pr-description-add@v1.1.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          add_markdown: |
+            ---
+
+            Thanks for the PR!
+
+            Any new images should be viewable with [our repo packages](https://github.com/orgs/bcgov/packages?repo_name=nr-containers).  :)
+
+            Build object: ${{ fromJSON(needs.scrub.outputs.json) }}
