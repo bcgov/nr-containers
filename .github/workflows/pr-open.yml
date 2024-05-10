@@ -10,8 +10,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  scrub:
-    name: Scrub for changed Dockerfiles
+  checks:
+    name: Dockerfile Checks
     runs-on: ubuntu-22.04
     outputs:
       json: ${{ steps.dockerfiles.outputs.json }}
@@ -45,14 +45,14 @@ jobs:
   # https://github.com/bcgov-nr/action-builder-ghcr
   builds:
     name: Builds
-    needs: [scrub]
-    if: ${{ needs.scrub.outputs.json }}
+    needs: [checks]
+    if: ${{ needs.checks.outputs.json }}
     permissions:
       packages: write
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        include: ${{ fromJSON(needs.scrub.outputs.json) }}
+        include: ${{ fromJSON(needs.checks.outputs.json) }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -71,7 +71,7 @@ jobs:
 
   results:
     name: PR Results
-    needs: [scrub, builds]
+    needs: [checks, builds]
     if: always() && (!failure()) && (!cancelled())
     runs-on: ubuntu-22.04
     permissions:
