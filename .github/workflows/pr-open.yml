@@ -69,12 +69,10 @@ jobs:
           package: ${{ matrix.package }}
           tag: ${{ steps.tag.outputs.full_tag }}
 
-  pr-description-add:
-    name: PR Description Add
+  results:
+    name: PR Results
     needs: [scrub, builds]
     if: always() && (!failure()) && (!cancelled())
-    env:
-      BUILD_OBJECT: ${{ fromJSON(needs.scrub.outputs.json) }}
     runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
@@ -86,8 +84,6 @@ jobs:
           add_markdown: |
             ---
 
-            Thanks for the PR!
+            Thanks for the PR!  Our PR workflow has completed successfully.  :)
 
-            Any new images should be viewable with [our repo packages](https://github.com/orgs/bcgov/packages?repo_name=nr-containers).  :)
-
-            Build object: ${{ env.BUILD_OBJECT }}
+            Any new images should be viewable with [our repo packages](https://github.com/orgs/bcgov/packages?repo_name=nr-containers).
