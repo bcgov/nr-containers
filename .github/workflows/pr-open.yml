@@ -74,7 +74,7 @@ jobs:
     needs: [scrub, builds]
     if: always() && (!failure()) && (!cancelled())
     env:
-      BUILD_OBJECT: fromJSON(needs.scrub.outputs.json)
+      BUILD_OBJECT: ${{ fromJSON(needs.scrub.outputs.json) }}
     runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
