@@ -1,3 +1,3 @@
-FROM airbyte/worker:0.59.1
+FROM airbyte/worker:0.60.1
 
 COPY io.airbyte-airbyte-workers-0.50.17.jar /app/airbyte-app/lib/io.airbyte-airbyte-workers-0.50.17.jar
