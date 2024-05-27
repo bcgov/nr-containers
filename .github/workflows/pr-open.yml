@@ -10,8 +10,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  scrub:
-    name: Scrub for changed Dockerfiles
+  checks:
+    name: Dockerfile Checks
     runs-on: ubuntu-22.04
     outputs:
       json: ${{ steps.dockerfiles.outputs.json }}
@@ -45,14 +45,14 @@ jobs:
   # https://github.com/bcgov-nr/action-builder-ghcr
   builds:
     name: Builds
-    needs: [scrub]
-    if: ${{ needs.scrub.outputs.json }}
+    needs: [checks]
+    if: ${{ needs.checks.outputs.json }}
     permissions:
       packages: write
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        include: ${{ fromJSON(needs.scrub.outputs.json) }}
+        include: ${{ fromJSON(needs.checks.outputs.json) }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -69,10 +69,10 @@ jobs:
           package: ${{ matrix.package }}
           tag: ${{ steps.tag.outputs.full_tag }}
 
-  pr-description-add:
-    name: PR Description Add
-    needs: [builds]
-    if: always() && (! failure())
+  results:
+    name: PR Results
+    needs: [checks, builds]
+    if: always() && (!failure()) && (!cancelled())
     runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
@@ -84,6 +84,6 @@ jobs:
           add_markdown: |
             ---
 
-            Thanks for the PR!
+            Thanks for the PR!  Our PR workflow has completed successfully.  :)
 
-            Any new images should be viewable with [our repo packages](https://github.com/orgs/bcgov/packages?repo_name=nr-containers).  :)
+            Any new images should be viewable with [our repo packages](https://github.com/orgs/bcgov/packages?repo_name=nr-containers).
