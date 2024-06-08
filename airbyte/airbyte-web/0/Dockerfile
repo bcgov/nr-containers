@@ -1,4 +1,4 @@
-FROM airbyte/webapp:0.61.0 
+FROM airbyte/webapp:0.62.3 
 
 EXPOSE 8080
 
