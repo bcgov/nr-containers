@@ -1,3 +1,3 @@
-FROM airbyte/db:0.63.8
+FROM airbyte/db:0.63.9
 
 RUN chmod -R 777 /var/run/postgresql
