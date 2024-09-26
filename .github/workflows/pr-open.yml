@@ -12,7 +12,7 @@ concurrency:
 jobs:
   checks:
     name: Dockerfile Checks
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       json: ${{ steps.dockerfiles.outputs.json }}
     steps:
@@ -49,7 +49,7 @@ jobs:
     if: ${{ needs.checks.outputs.json }}
     permissions:
       packages: write
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         include: ${{ fromJSON(needs.checks.outputs.json) }}
@@ -73,7 +73,7 @@ jobs:
     name: PR Results
     needs: [checks, builds]
     if: always() && (!failure()) && (!cancelled())
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       pull-requests: write
     timeout-minutes: 1
