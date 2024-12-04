@@ -78,7 +78,7 @@ jobs:
       pull-requests: write
     timeout-minutes: 1
     steps:
-      - uses: bcgov-nr/action-pr-description-add@v1.1.2
+      - uses: bcgov-nr/action-pr-description-add@v1.2.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           add_markdown: |
