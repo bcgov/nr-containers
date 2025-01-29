@@ -46,7 +46,7 @@ jobs:
   builds:
     name: Builds
     needs: [checks]
-    if: ${{ needs.checks.outputs.json }}
+    if: needs.checks.outputs.json
     permissions:
       packages: write
     runs-on: ubuntu-24.04
