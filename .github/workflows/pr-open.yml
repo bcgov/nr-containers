@@ -71,19 +71,10 @@ jobs:
 
   results:
     name: PR Results
-    needs: [checks, builds]
-    if: always() && (!failure()) && (!cancelled())
+    needs: [builds, checks]
+    if: always()
     runs-on: ubuntu-24.04
-    permissions:
-      pull-requests: write
-    timeout-minutes: 1
     steps:
-      - uses: bcgov/action-pr-description-add@14338bfe0278ead273b3c1189e5aa286ff6709c4 # v2.0.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          add_markdown: |
-            ---
-
-            Thanks for the PR!  Our PR workflow has completed successfully.  :)
-
-            Any new images should be viewable with [our repo packages](https://github.com/orgs/bcgov/packages?repo_name=nr-containers).
+      - if: contains(needs.*.result, 'failure')||contains(needs.*.result, 'canceled')
+        run: echo "At least one job has failed." && exit 1
+      - run: echo "Success!"
