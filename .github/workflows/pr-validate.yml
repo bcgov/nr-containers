@@ -17,12 +17,7 @@ jobs:
     permissions:
       pull-requests: write
     uses: bcgov/quickstart-openshift-helpers/.github/workflows/.pr-validate.yml@0b8121a528aaa05ef8def2f79be9081691dfe98a # v0.9.0
-    with:
-      markdown_links: |
-            Thanks for the PR!  Our PR workflow has completed successfully.  :)
-
-            Any new images should be viewable with [our repo packages](https://github.com/orgs/bcgov/packages?repo_name=nr-containers).
-
+    
   results:
     name: Validate Results
     if: always()
