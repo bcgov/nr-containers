@@ -72,6 +72,8 @@ jobs:
   results:
     name: PR Results
     needs: [builds, checks]
+    permissions:
+      pull-requests: write
     if: always()
     permissions:
       pull-requests: write
