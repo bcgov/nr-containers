@@ -9,12 +9,14 @@ concurrency:
   group: pr-${{ github.workflow }}-${{ github.event.number }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   checks:
     name: Dockerfile Checks
-    runs-on: ubuntu-24.04
     outputs:
       json: ${{ steps.dockerfiles.outputs.json }}
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Get Dockerfiles
