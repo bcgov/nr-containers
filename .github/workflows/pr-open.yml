@@ -16,7 +16,7 @@ jobs:
     outputs:
       json: ${{ steps.dockerfiles.outputs.json }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Get Dockerfiles
         id: dockerfiles
         run: |
@@ -55,7 +55,7 @@ jobs:
         include: ${{ fromJSON(needs.checks.outputs.json) }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Get tag
         id: tag
         run: |
@@ -63,7 +63,7 @@ jobs:
           echo "full_tag=${TAG}" >> $GITHUB_OUTPUT
 
       - name: Build or import
-        uses: bcgov/action-builder-ghcr@v2.3.0
+        uses: bcgov/action-builder-ghcr@ace71f7a527ca6fc43c15c7806314be5a4579d2c # v2.3.0
         with:
           build_context: ${{ matrix.package }}/${{ matrix.major_tag }}
           package: ${{ matrix.package }}
@@ -78,7 +78,7 @@ jobs:
       pull-requests: write
     timeout-minutes: 1
     steps:
-      - uses: bcgov/action-pr-description-add@v2.0.0
+      - uses: bcgov/action-pr-description-add@14338bfe0278ead273b3c1189e5aa286ff6709c4 # v2.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           add_markdown: |
