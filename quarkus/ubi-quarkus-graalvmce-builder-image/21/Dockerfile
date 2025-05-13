@@ -1,1 +1,1 @@
-FROM quay.io/quarkus/ubi-quarkus-graalvmce-builder-image:jdk-21@sha256:e44e456a8ce97d64b22f91f8f8fc45ad1d7225782194ad96c1133260fbf01c77
+FROM quay.io/quarkus/ubi-quarkus-graalvmce-builder-image:jdk-21
