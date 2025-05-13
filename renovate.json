@@ -1,7 +1,15 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "Presets from https://github.com/bcgov/renovate-config",
+  "description": "Presets from https://github.com/bcgov/nr-renovate",
   "extends": [
     "github>bcgov/renovate-config"
+  ],
+  "packageRules": [
+    {
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "pinDigests": false
+    }
   ]
 }
