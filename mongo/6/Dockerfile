@@ -1,4 +1,4 @@
-FROM mongo:6@sha256:dc5511199234dacbb52f9a404bb7d098a4a70d9801d00c01f392395e983e58e8
+FROM mongo:6@sha256:ccc74e79f5ce9dad14741e40f1aef86032cf441d485cdecda8e28ace5f268641
 
 # Health check
 HEALTHCHECK --interval=15s --timeout=5s --retries=3 CMD ["mongosh", "--eval", "db.adminCommand('ping')"]
