@@ -57,7 +57,7 @@ jobs:
         include: ${{ fromJSON(needs.checks.outputs.json) }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v3.0.1
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Get tag
         id: tag
         run: |
@@ -65,7 +65,7 @@ jobs:
           echo "full_tag=${TAG}" >> $GITHUB_OUTPUT
 
       - name: Build or import
-        uses: bcgov/action-builder-ghcr@fd17bc1cbb16a60514e0df3966d42dff9fc232bc # v4.0.0
+        uses: bcgov/action-builder-ghcr@v3.0.1
         with:
           build_context: ${{ matrix.package }}/${{ matrix.major_tag }}
           package: ${{ matrix.package }}
