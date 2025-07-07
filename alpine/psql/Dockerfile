@@ -1,7 +1,7 @@
 # Use the official Alpine image as a base
 FROM alpine:3.22
 
-# Install the PostgreSQL client
+# Install the PostgreSQL client # comment to rebuild.
 RUN apk --no-cache add postgresql-client
 
 # Set the working directory
