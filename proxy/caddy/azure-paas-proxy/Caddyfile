@@ -6,7 +6,6 @@
   handle_path /openai* {
     reverse_proxy {$AZURE_OPENAI_ENDPOINT} {
       header_up Host {$AZURE_OPENAI_HOST}
-      header_up X-Forwarded-Host {host}
       header_up X-Forwarded-Proto https
       transport http {
         tls_server_name {$AZURE_OPENAI_HOST}
@@ -19,7 +18,6 @@
   handle_path /storage* {
     reverse_proxy {$AZURE_STORAGE_ENDPOINT} {
       header_up Host {$AZURE_STORAGE_HOST}
-      header_up X-Forwarded-Host {host}
       header_up X-Forwarded-Proto https
       transport http {
         tls_server_name {$AZURE_STORAGE_HOST}
@@ -32,7 +30,6 @@
   handle_path /document-intelligence* {
     reverse_proxy {$AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT} {
       header_up Host {$AZURE_DOCUMENT_INTELLIGENCE_HOST}
-      header_up X-Forwarded-Host {host}
       header_up X-Forwarded-Proto https
       transport http {
         tls_server_name {$AZURE_DOCUMENT_INTELLIGENCE_HOST}
@@ -47,7 +44,6 @@
   handle_path /search* {
     reverse_proxy {$AZURE_SEARCH_ENDPOINT} {
       header_up Host {$AZURE_SEARCH_HOST}
-      header_up X-Forwarded-Host {host}
       header_up X-Forwarded-Proto https
       transport http {
         tls_server_name {$AZURE_SEARCH_HOST}
@@ -62,7 +58,6 @@
   handle_path /cosmos* {
     reverse_proxy {$AZURE_COSMOS_ENDPOINT} {
       header_up Host {$AZURE_COSMOS_HOST}
-      header_up X-Forwarded-Host {host}
       header_up X-Forwarded-Proto https
       transport http {
         tls_server_name {$AZURE_COSMOS_HOST}
