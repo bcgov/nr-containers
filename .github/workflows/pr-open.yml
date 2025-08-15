@@ -69,7 +69,9 @@ jobs:
         with:
           build_context: ${{ matrix.package }}/${{ matrix.major_tag }}
           package: ${{ matrix.package }}
-          tags: ${{ steps.tag.outputs.full_tag }}
+          tags: 
+            ${{ steps.tag.outputs.full_tag }}
+            ${{ steps.tag.outputs.full_tag }}-${{github.run_number}}
 
   results:
     name: PR Results
