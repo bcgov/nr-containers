@@ -15,18 +15,6 @@
       }
     }
   }
-  handle_path /storage* {
-    reverse_proxy {$AZURE_STORAGE_ENDPOINT} {
-      header_up Host {$AZURE_STORAGE_HOST}
-      header_up X-Forwarded-Proto https
-      transport http {
-        tls_server_name {$AZURE_STORAGE_HOST}
-        read_timeout 10m
-        write_timeout 10m
-        versions h2 h1.1
-      }
-    }
-  }
   handle_path /document-intelligence* {
     reverse_proxy {$AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT} {
       header_up Host {$AZURE_DOCUMENT_INTELLIGENCE_HOST}
