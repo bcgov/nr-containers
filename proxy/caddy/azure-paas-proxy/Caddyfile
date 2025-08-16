@@ -1,8 +1,8 @@
 :80 {
-    log {
+	log {
 		output stdout
 		format console
-		level debug
+		level INFO
 	}
 	respond /healthz 200
 
