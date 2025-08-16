@@ -69,7 +69,7 @@ jobs:
         with:
           build_context: ${{ matrix.package }}/${{ matrix.major_tag }}
           package: ${{ matrix.package }}
-          tags: 
+          tags: |
             ${{ steps.tag.outputs.full_tag }}
             ${{ steps.tag.outputs.full_tag }}-${{github.run_number}}
 
