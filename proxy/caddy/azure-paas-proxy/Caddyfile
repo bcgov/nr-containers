@@ -1,0 +1,40 @@
+:80 {
+	log {
+		output stdout
+		format console
+		level INFO
+	}
+	respond /healthz 200 {
+		body `{"status": "healthy"}`
+		close
+	}
+
+	handle_path /openai* {
+		reverse_proxy {$AZURE_OPENAI_ENDPOINT} {
+			header_up Host {$AZURE_OPENAI_HOST}
+			header_up X-Forwarded-Proto https
+		}
+	}
+	handle_path /document-intelligence* {
+		reverse_proxy {$AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT} {
+			header_up Host {$AZURE_DOCUMENT_INTELLIGENCE_HOST}
+			header_up X-Forwarded-Proto https
+		}
+	}
+
+	# Azure Cognitive Search
+	handle_path /search* {
+		reverse_proxy {$AZURE_SEARCH_ENDPOINT} {
+			header_up Host {$AZURE_SEARCH_HOST}
+			header_up X-Forwarded-Proto https
+		}
+	}
+
+	# Cosmos DB (Gateway mode only; SDK must be set to Gateway)
+	handle_path /cosmos* {
+		reverse_proxy {$AZURE_COSMOS_ENDPOINT} {
+			header_up Host {$AZURE_COSMOS_HOST}
+			header_up X-Forwarded-Proto https
+		}
+	}
+}
