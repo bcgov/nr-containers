@@ -4,7 +4,10 @@
 		format console
 		level INFO
 	}
-	respond /healthz 200
+	respond /healthz 200 {
+		body `{"status": "healthy"}`
+		close
+	}
 
 	handle_path /openai* {
 		reverse_proxy {$AZURE_OPENAI_ENDPOINT} {
