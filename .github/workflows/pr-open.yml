@@ -68,6 +68,7 @@ jobs:
         uses: bcgov/action-builder-ghcr@1e4295b9766963ca36612b78560db6235120b80f # 4.1.1
         with:
           build_context: ${{ matrix.package }}/${{ matrix.major_tag }}
+          build_file: ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile
           package: ${{ matrix.package }}
           tags: ${{ steps.tag.outputs.full_tag }}
 
@@ -82,7 +83,7 @@ jobs:
       - if: contains(needs.*.result, 'failure')||contains(needs.*.result, 'canceled')
         run: echo "At least one job has failed." && exit 1
       - run: echo "Success!"
-      
+
       - uses: bcgov/action-pr-description-add@14338bfe0278ead273b3c1189e5aa286ff6709c4 # v2.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -92,4 +93,3 @@ jobs:
             Thanks for the PR!  Our PR workflow has completed successfully.  :)
 
             Any new images should be viewable with [our repo packages](https://github.com/orgs/bcgov/packages?repo_name=nr-containers).
-
