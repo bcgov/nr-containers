@@ -50,6 +50,8 @@ jobs:
     needs: [checks]
     if: needs.checks.outputs.json
     permissions:
+      attestations: write
+      id-token: write
       packages: write
     runs-on: ubuntu-24.04
     strategy:
