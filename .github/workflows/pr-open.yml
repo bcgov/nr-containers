@@ -40,8 +40,9 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
-          # Filter for Dockerfiles matching pattern: package/version/Dockerfile
-          DOCKERFILES=$(echo "$CHANGED_FILES" | grep -E '^[^/]+/[^/]+/Dockerfile$' | sort -u || true)
+          # Filter for Dockerfiles (pattern matches any path with at least 2 levels + Dockerfile)
+          # This matches both: package/version/Dockerfile AND package/subpackage/version/Dockerfile
+          DOCKERFILES=$(echo "$CHANGED_FILES" | grep -E '^.*/.*/Dockerfile$' | sort -u || true)
 
           # Save the list
           echo "Changed Dockerfiles:"
@@ -62,9 +63,13 @@ jobs:
           while IFS= read -r dockerfile; do
             if [ -n "$dockerfile" ]; then
               # Extract package and major version from path
-              # Pattern: package/major_tag/Dockerfile
-              PACKAGE=$(echo "$dockerfile" | cut -d'/' -f1)
-              MAJOR_TAG=$(echo "$dockerfile" | cut -d'/' -f2)
+              # For "package/version/Dockerfile" or "package/subpackage/version/Dockerfile"
+              # Remove "/Dockerfile" suffix
+              BASE=${dockerfile%/*}
+              # Package is everything except the last directory
+              PACKAGE=${BASE%/*}
+              # Major tag is the last directory before Dockerfile
+              MAJOR_TAG=${BASE##*/}
 
               echo "Found: package=$PACKAGE, major_tag=$MAJOR_TAG"
 
