@@ -39,11 +39,12 @@ jobs:
             # Extract major tag (last directory)
             MAJOR_TAG=${BASE##*/}
             # Extract full tag from Dockerfile and trim whitespace
-            FULL_TAG=$(grep '^FROM' "$d" | cut -d':' -f2 | tr -d ' \t\n\r')
-            # If no tag is specified, default to 'latest'
-            FROM_IMAGE=$(grep '^FROM' "$d" | cut -d':' -f1 | tr -d ' \t\n\r')
-            FROM_IMAGE=$(echo "$FROM_IMAGE" | sed 's/^FROM //')
-            if [ -z "$FULL_TAG" ] || [ "$FULL_TAG" = "$FROM_IMAGE" ]; then
+            FROM_LINE=$(grep '^FROM' "$d" | tr -d ' \t\n\r')
+            # Check if FROM line contains a colon (has explicit tag)
+            if echo "$FROM_LINE" | grep -q ':'; then
+              FULL_TAG=$(echo "$FROM_LINE" | cut -d':' -f2)
+            else
+              # No explicit tag, default to 'latest'
               FULL_TAG="latest"
             fi
             ITEM="{\"package\": \"${PACKAGE}\", \"major_tag\": "
@@ -141,8 +142,9 @@ jobs:
     steps:
       - if: needs.check.result == 'skipped'
         run: echo "No images to check."
-      - if: needs.check.outputs.corrupted != '' && \
-            needs.check.outputs.corrupted != '[]'
+      - if: |
+          needs.check.outputs.corrupted != '' &&
+          needs.check.outputs.corrupted != '[]'
         run: |
           echo "Corrupted images were found and rebuild was triggered."
           echo "Corrupted: ${{ needs.check.outputs.corrupted }}"
