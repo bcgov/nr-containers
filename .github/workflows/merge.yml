@@ -1,21 +1,25 @@
-name: PR
+name: Merge to Main
 
 on:
-  pull_request:
+  push:
     branches: [main]
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC to pick up new container versions
+    - cron: '0 2 * * 0'
+  workflow_dispatch: # Allow manual trigger
 
 concurrency:
-  # PR open and close use the same group, allowing only one at a time
-  group: pr-${{ github.workflow }}-${{ github.event.number }}
+  group: ${{ github.workflow }}
   cancel-in-progress: true
 
 permissions: {}
 
 jobs:
-  checks:
-    name: Detect Changed Dockerfiles
+  detect:
+    name: Detect Containers to Build
     outputs:
       json: ${{ steps.create-matrix.outputs.json }}
+      mode: ${{ steps.detect-mode.outputs.mode }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
@@ -23,30 +27,55 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Fetch base branch
+      - name: Detect workflow mode
+        id: detect-mode
         run: |
-          # Fetch the base branch to compare against
-          echo "Fetching base branch: ${{ github.event.repository.default_branch }}"
-          git fetch origin ${{ github.event.repository.default_branch }}
+          # Determine if this is a push (merge) or scheduled run
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "mode=merge" >> $GITHUB_OUTPUT
+            echo "Running in MERGE mode - will build only changed containers"
+          else
+            echo "mode=scheduled" >> $GITHUB_OUTPUT
+            echo "Running in SCHEDULED mode - will scan all containers"
+          fi
 
-      - name: Find changed Dockerfiles
-        id: find-dockerfiles
+      - name: Find Dockerfiles (merge mode)
+        if: github.event_name == 'push'
+        id: find-merge
         run: |
-          # Find all Dockerfiles that changed compared to the base branch
-          echo "Finding changed Dockerfiles..."
+          # Find Dockerfiles changed in the merge
+          echo "Finding changed Dockerfiles in merge..."
 
-          # Get the list of changed files
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.event.repository.default_branch }})
+          # Get the previous commit
+          PREVIOUS_COMMIT="${{ github.event.before }}"
+          CURRENT_COMMIT="${{ github.sha }}"
+
+          echo "Comparing $PREVIOUS_COMMIT to $CURRENT_COMMIT"
+
+          # Get changed files in this push
+          CHANGED_FILES=$(git diff --name-only "$PREVIOUS_COMMIT" "$CURRENT_COMMIT")
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
           # Filter for Dockerfiles matching pattern: package/version/Dockerfile
           DOCKERFILES=$(echo "$CHANGED_FILES" | grep -E '^[^/]+/[^/]+/Dockerfile$' | sort -u || true)
 
-          # Save the list
           echo "Changed Dockerfiles:"
           echo "$DOCKERFILES"
           echo "$DOCKERFILES" > /tmp/dockerfiles.txt
+
+      - name: Find all Dockerfiles (scheduled mode)
+        if: github.event_name != 'push'
+        id: find-scheduled
+        run: |
+          # Find all Dockerfiles in the repository
+          echo "Finding all Dockerfiles for scheduled build..."
+
+          # Find all Dockerfiles matching the pattern
+          find . -type f -path '*/*/Dockerfile' | grep -E '^\./[^/]+/[^/]+/Dockerfile$' | sed 's|^\./||' | sort > /tmp/dockerfiles.txt
+
+          echo "All Dockerfiles found:"
+          cat /tmp/dockerfiles.txt
 
       - name: Create build matrix
         id: create-matrix
@@ -89,9 +118,9 @@ jobs:
   # See: https://github.com/bcgov/action-builder-ghcr
   builds:
     name: Build Container Images
-    needs: [checks]
+    needs: [detect]
     # Only run if there are Dockerfiles to build
-    if: needs.checks.outputs.json != '[]'
+    if: needs.detect.outputs.json != '[]'
     permissions:
       attestations: write
       id-token: write
@@ -99,8 +128,10 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        # Build each changed Dockerfile in parallel
-        include: ${{ fromJSON(needs.checks.outputs.json) }}
+        # Build each Dockerfile in parallel
+        include: ${{ fromJSON(needs.detect.outputs.json) }}
+      # Allow partial failures in scheduled mode (some base images may be unavailable)
+      fail-fast: false
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -128,29 +159,22 @@ jobs:
           tags: ${{ steps.tag.outputs.full_tag }}
 
   results:
-    name: Report PR Results
-    needs: [builds, checks]
-    permissions:
-      pull-requests: write
+    name: Report Build Results
+    needs: [detect, builds]
     if: always()
     runs-on: ubuntu-24.04
     steps:
       - name: Check for failures
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'canceled')
         run: |
-          echo "❌ At least one job has failed or was canceled."
-          exit 1
+          echo "⚠️  Some builds failed or were canceled."
+          if [ "${{ needs.detect.outputs.mode }}" = "scheduled" ]; then
+            echo "This was a scheduled run - some failures are acceptable."
+            exit 0
+          else
+            echo "This was a merge - failing the workflow."
+            exit 1
+          fi
 
       - name: Report success
-        run: echo "✅ All checks passed successfully!"
-
-      - name: Add comment to PR
-        uses: bcgov/action-pr-description-add@d79a5c3b49d3b3b3215495afac3ae599cef191bb # v2.0.1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          add_markdown: |
-            ---
-
-            Thanks for the PR!  Our PR workflow has completed successfully.  :)
-
-            Any new images should be viewable with [our repo packages](https://github.com/orgs/bcgov/packages?repo_name=nr-containers).
+        run: echo "✅ All builds completed successfully!"
