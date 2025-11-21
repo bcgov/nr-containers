@@ -10,6 +10,15 @@
         "dockerfile"
       ],
       "pinDigests": false
+    },
+    {
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
     }
   ]
 }
