@@ -18,7 +18,7 @@ jobs:
       json: ${{ steps.dockerfiles.outputs.json }}
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Get Dockerfiles
         id: dockerfiles
         run: |
@@ -59,7 +59,7 @@ jobs:
         include: ${{ fromJSON(needs.checks.outputs.json) }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Get tag
         id: tag
         run: |
