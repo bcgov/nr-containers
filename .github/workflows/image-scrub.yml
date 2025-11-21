@@ -40,6 +40,12 @@ jobs:
             MAJOR_TAG=${BASE##*/}
             # Extract full tag from Dockerfile and trim whitespace
             FULL_TAG=$(grep '^FROM' "$d" | cut -d':' -f2 | tr -d ' \t\n\r')
+            # If no tag is specified, default to 'latest'
+            FROM_IMAGE=$(grep '^FROM' "$d" | cut -d':' -f1 | tr -d ' \t\n\r')
+            FROM_IMAGE=$(echo "$FROM_IMAGE" | sed 's/^FROM //')
+            if [ -z "$FULL_TAG" ] || [ "$FULL_TAG" = "$FROM_IMAGE" ]; then
+              FULL_TAG="latest"
+            fi
             ITEM="{\"package\": \"${PACKAGE}\", \"major_tag\": "
             ITEM="${ITEM}\"${MAJOR_TAG}\", \"full_tag\": \"${FULL_TAG}\"},"
             LIST="${LIST}${ITEM}"
@@ -50,12 +56,12 @@ jobs:
           JSON="[${LIST}]"
 
           # Send to output
-          echo "json=${JSON}"
           echo "json=${JSON}" >> $GITHUB_OUTPUT
 
   check:
     name: Check Images
     needs: [discover]
+    if: needs.discover.outputs.json != '[]' && needs.discover.outputs.json != ''
     outputs:
       corrupted: ${{ steps.check.outputs.corrupted }}
     runs-on: ubuntu-24.04
@@ -120,7 +126,7 @@ jobs:
       - uses: actions/checkout@v5
       - name: Rebuild corrupted image
         # yamllint disable-line rule:line-length
-        uses: bcgov/action-builder-ghcr@cde7f10b0441b6dd3c1da3e6a54ac05899e8eed9
+        uses: bcgov/action-builder-ghcr@cde7f10b0441b6dd3c1da3e6a54ac05899e8eed9  # 4.2.0
         with:
           build_context: ${{ matrix.package }}/${{ matrix.major_tag }}
           build_file: ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile
@@ -129,16 +135,19 @@ jobs:
 
   results:
     name: Scrub Results
-    needs: [discover, check, rebuild]
-    if: always()
+    needs: [discover, check]
+    if: always() && needs.discover.result == 'success'
     runs-on: ubuntu-24.04
     steps:
-      - if: needs.check.outputs.corrupted != '[]'
+      - if: needs.check.result == 'skipped'
+        run: echo "No images to check."
+      - if: needs.check.outputs.corrupted != '' && \
+            needs.check.outputs.corrupted != '[]'
         run: |
-          echo "Corrupted images were found and rebuilt."
+          echo "Corrupted images were found and rebuild was triggered."
           echo "Corrupted: ${{ needs.check.outputs.corrupted }}"
       - if: needs.check.outputs.corrupted == '[]'
         run: echo "No corrupted images found. All images are healthy!"
       - if: contains(needs.*.result, 'failure')
-        run: echo "Some rebuilds failed. Please check the logs." && exit 1
+        run: echo "Some jobs failed. Please check the logs." && exit 1
       - run: echo "Image scrub completed successfully!"
