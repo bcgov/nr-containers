@@ -1,0 +1,144 @@
+---
+name: Image Scrub
+
+on:
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  discover:
+    name: Discover Images
+    outputs:
+      json: ${{ steps.dockerfiles.outputs.json }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Get all Dockerfiles
+        id: dockerfiles
+        run: |
+          # Find all Dockerfiles and create JSON object for the checker
+          DOCKERFILES=($(
+            find . -name "Dockerfile" -path "*/*/Dockerfile" | sort
+          ))
+          LIST=""
+          for d in "${DOCKERFILES[@]}"; do
+            # Remove leading ./
+            d=${d#./}
+            # Remove trailing /Dockerfile
+            BASE=${d%/*}
+            # Extract package (everything before last /)
+            PACKAGE=${BASE%/*}
+            # Extract major tag (last directory)
+            MAJOR_TAG=${BASE##*/}
+            # Extract full tag from Dockerfile and trim whitespace
+            FULL_TAG=$(grep '^FROM' "$d" | cut -d':' -f2 | tr -d ' \t\n\r')
+            ITEM="{\"package\": \"${PACKAGE}\", \"major_tag\": "
+            ITEM="${ITEM}\"${MAJOR_TAG}\", \"full_tag\": \"${FULL_TAG}\"},"
+            LIST="${LIST}${ITEM}"
+          done
+
+          # Clip trailing comma and wrap in brackets
+          LIST=$(echo "$LIST" | sed 's/,$//')
+          JSON="[${LIST}]"
+
+          # Send to output
+          echo "json=${JSON}"
+          echo "json=${JSON}" >> $GITHUB_OUTPUT
+
+  check:
+    name: Check Images
+    needs: [discover]
+    outputs:
+      corrupted: ${{ steps.check.outputs.corrupted }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check image manifests
+        id: check
+        env:
+          IMAGES_JSON: ${{ needs.discover.outputs.json }}
+        run: |
+          # Parse the JSON and check each image
+          CORRUPTED_LIST=""
+
+          echo "Checking images for corruption..."
+
+          # Use process substitution to avoid subshell
+          while read -r image; do
+            PACKAGE=$(echo "$image" | jq -r '.package')
+            MAJOR_TAG=$(echo "$image" | jq -r '.major_tag')
+            FULL_TAG=$(echo "$image" | jq -r '.full_tag')
+            IMAGE_NAME="ghcr.io/${{ github.repository }}/${PACKAGE}"
+            IMAGE_NAME="${IMAGE_NAME}:${FULL_TAG}"
+
+            echo "Checking: $IMAGE_NAME"
+
+            # Try to inspect the manifest
+            if ! docker manifest inspect "$IMAGE_NAME" > /dev/null 2>&1; then
+              echo "  ❌ CORRUPTED: $IMAGE_NAME"
+              ITEM="{\"package\": \"${PACKAGE}\", \"major_tag\": "
+              ITEM="${ITEM}\"${MAJOR_TAG}\", \"full_tag\": \"${FULL_TAG}\"},"
+              CORRUPTED_LIST="${CORRUPTED_LIST}${ITEM}"
+            else
+              echo "  ✓ OK: $IMAGE_NAME"
+            fi
+          done < <(echo "$IMAGES_JSON" | jq -c '.[]')
+
+          # Clip trailing comma
+          if [ -n "$CORRUPTED_LIST" ]; then
+            CORRUPTED_LIST=$(echo "$CORRUPTED_LIST" | sed 's/,$//')
+            CORRUPTED_JSON="[${CORRUPTED_LIST}]"
+            echo "corrupted=${CORRUPTED_JSON}" >> $GITHUB_OUTPUT
+            echo "Found corrupted images: $CORRUPTED_JSON"
+          else
+            echo "corrupted=[]" >> $GITHUB_OUTPUT
+            echo "No corrupted images found."
+          fi
+
+  rebuild:
+    name: Rebuild Corrupted Images
+    needs: [check]
+    if: needs.check.outputs.corrupted != '[]'
+    permissions:
+      attestations: write
+      id-token: write
+      packages: write
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.check.outputs.corrupted) }}
+      fail-fast: false
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Rebuild corrupted image
+        # yamllint disable-line rule:line-length
+        uses: bcgov/action-builder-ghcr@cde7f10b0441b6dd3c1da3e6a54ac05899e8eed9
+        with:
+          build_context: ${{ matrix.package }}/${{ matrix.major_tag }}
+          build_file: ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile
+          package: ${{ matrix.package }}
+          tags: ${{ matrix.full_tag }}
+
+  results:
+    name: Scrub Results
+    needs: [discover, check, rebuild]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - if: needs.check.outputs.corrupted != '[]'
+        run: |
+          echo "Corrupted images were found and rebuilt."
+          echo "Corrupted: ${{ needs.check.outputs.corrupted }}"
+      - if: needs.check.outputs.corrupted == '[]'
+        run: echo "No corrupted images found. All images are healthy!"
+      - if: contains(needs.*.result, 'failure')
+        run: echo "Some rebuilds failed. Please check the logs." && exit 1
+      - run: echo "Image scrub completed successfully!"
