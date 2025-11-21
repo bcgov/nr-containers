@@ -67,7 +67,7 @@ jobs:
           echo "full_tag=${TAG}" >> $GITHUB_OUTPUT
 
       - name: Build or import
-        uses: bcgov/action-builder-ghcr@cde7f10b0441b6dd3c1da3e6a54ac05899e8eed9 # 4.2.0
+        uses: bcgov/action-builder-ghcr@2b24ac7f95e6a019064151498660437cca3202c5 # 4.2.1
         with:
           build_context: ${{ matrix.package }}/${{ matrix.major_tag }}
           build_file: ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile
