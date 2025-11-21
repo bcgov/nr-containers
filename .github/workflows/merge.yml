@@ -46,14 +46,20 @@ jobs:
           # Find Dockerfiles changed in the merge
           echo "Finding changed Dockerfiles in merge..."
 
-          # Get the previous commit
+          # Get the previous commit (with fallback to HEAD~1)
           PREVIOUS_COMMIT="${{ github.event.before }}"
           CURRENT_COMMIT="${{ github.sha }}"
+
+          # Fallback if previous commit is not available or is all zeros (initial commit)
+          if [ -z "$PREVIOUS_COMMIT" ] || [ "$PREVIOUS_COMMIT" = "0000000000000000000000000000000000000000" ]; then
+            echo "No previous commit available, using HEAD~1"
+            PREVIOUS_COMMIT="HEAD~1"
+          fi
 
           echo "Comparing $PREVIOUS_COMMIT to $CURRENT_COMMIT"
 
           # Get changed files in this push
-          CHANGED_FILES=$(git diff --name-only "$PREVIOUS_COMMIT" "$CURRENT_COMMIT")
+          CHANGED_FILES=$(git diff --name-only "$PREVIOUS_COMMIT" "$CURRENT_COMMIT" || true)
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
@@ -164,11 +170,22 @@ jobs:
     if: always()
     runs-on: ubuntu-24.04
     steps:
+      - name: Determine success criteria
+        id: criteria
+        run: |
+          # In scheduled mode, tolerate some failures (base images may be unavailable)
+          # In merge mode, all builds must succeed
+          if [ "${{ needs.detect.outputs.mode }}" = "scheduled" ]; then
+            echo "allow_failures=true" >> $GITHUB_OUTPUT
+          else
+            echo "allow_failures=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Check for failures
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'canceled')
         run: |
           echo "⚠️  Some builds failed or were canceled."
-          if [ "${{ needs.detect.outputs.mode }}" = "scheduled" ]; then
+          if [ "${{ steps.criteria.outputs.allow_failures }}" = "true" ]; then
             echo "This was a scheduled run - some failures are acceptable."
             exit 0
           else
