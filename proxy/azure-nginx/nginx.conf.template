@@ -115,7 +115,7 @@ http {
         location /openai/ {
             rewrite ^/openai/(.*) /$1 break;
             proxy_pass https://azure_openai;
-            proxy_set_header Host $AZURE_OPENAI_HOST;
+            proxy_set_header Host ${AZURE_OPENAI_HOST};
             include /etc/nginx/conf.d/azure-proxy-common.conf;
         }
 
@@ -123,7 +123,7 @@ http {
         location /document-intelligence/ {
             rewrite ^/document-intelligence/(.*) /$1 break;
             proxy_pass https://azure_document_intelligence;
-            proxy_set_header Host $AZURE_DOCUMENT_INTELLIGENCE_HOST;
+            proxy_set_header Host ${AZURE_DOCUMENT_INTELLIGENCE_HOST};
             include /etc/nginx/conf.d/azure-proxy-common.conf;
         }
 
@@ -131,7 +131,7 @@ http {
         location /search/ {
             rewrite ^/search/(.*) /$1 break;
             proxy_pass https://azure_search;
-            proxy_set_header Host $AZURE_SEARCH_HOST;
+            proxy_set_header Host ${AZURE_SEARCH_HOST};
             include /etc/nginx/conf.d/azure-proxy-common.conf;
         }
 
@@ -139,7 +139,7 @@ http {
         location /cosmos/ {
             rewrite ^/cosmos/(.*) /$1 break;
             proxy_pass https://azure_cosmos;
-            proxy_set_header Host $AZURE_COSMOS_HOST;
+            proxy_set_header Host ${AZURE_COSMOS_HOST};
             include /etc/nginx/conf.d/azure-proxy-common.conf;
         }
     }

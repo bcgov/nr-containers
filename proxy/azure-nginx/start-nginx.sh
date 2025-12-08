@@ -46,7 +46,6 @@ echo "$(ts) - Configuration test passed"
 
 # Signal handling
 stop=0
-status=1
 
 on_term() {
     stop=1
@@ -61,10 +60,7 @@ while [ "$attempt" -le "$MAX_RETRIES" ] && [ "$stop" -eq 0 ]; do
     echo "$(ts) - Starting nginx (attempt $attempt/$MAX_RETRIES)"
     
     # Run nginx in foreground
-    nginx -g 'daemon off;' || true
-    status=$?
-    
-    if [ "$status" -eq 0 ]; then
+    if nginx -g 'daemon off;'; then
         echo "$(ts) - nginx exited cleanly (code 0). Not retrying."
         exit 0
     fi
@@ -74,7 +70,7 @@ while [ "$attempt" -le "$MAX_RETRIES" ] && [ "$stop" -eq 0 ]; do
         exit 0
     fi
 
-    echo "$(ts) - nginx exited with code $status"
+    echo "$(ts) - nginx exited with non-zero code"
     attempt=$((attempt + 1))
 
     if [ "$attempt" -le "$MAX_RETRIES" ]; then
