@@ -73,7 +73,7 @@ http {
 
     # Upstream keepalive pools - tuned for B1 tier
     upstream azure_openai {
-        server ${AZURE_OPENAI_HOST}:443;
+        server ${AZURE_OPENAI_HOST};
         keepalive 16;
         keepalive_requests 1000;
         keepalive_timeout 60s;
