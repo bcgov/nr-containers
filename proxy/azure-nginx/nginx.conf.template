@@ -1,0 +1,146 @@
+# Performance-tuned nginx configuration for Azure App Service B1
+# Optimized for: 1 CPU core, 1.75 GB RAM
+worker_processes 1;
+worker_rlimit_nofile 8192;
+error_log /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections 1024;
+    use epoll;
+    multi_accept on;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    # Logging - consider disabling access_log for max performance
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent"';
+
+    access_log /var/log/nginx/access.log main buffer=16k flush=5s;
+    # Uncomment below to disable access logging for max performance:
+    # access_log off;
+
+    # Performance optimizations
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    
+    # Keepalive tuning
+    keepalive_timeout 65;
+    keepalive_requests 10000;
+    
+    # Reset lingering connections quickly
+    reset_timedout_connection on;
+    
+    # Hash table sizes
+    types_hash_max_size 2048;
+    variables_hash_max_size 2048;
+    
+    # Open file cache - reduces syscalls (tuned for B1 memory)
+    open_file_cache max=1000 inactive=30s;
+    open_file_cache_valid 60s;
+    open_file_cache_min_uses 2;
+    open_file_cache_errors on;
+
+    # Gzip compression (CPU trade-off, but reduces bandwidth)
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 4;  # Reduced from 6 for less CPU usage
+    gzip_min_length 256;
+    gzip_types text/plain text/css text/xml application/json application/javascript 
+               application/xml application/xml+rss text/javascript application/x-javascript;
+
+    # Hide nginx version
+    server_tokens off;
+
+    # Timeouts for Azure services
+    proxy_connect_timeout 30s;
+    proxy_send_timeout 120s;
+    proxy_read_timeout 120s;
+
+    # Buffer settings - tuned for typical API responses
+    proxy_buffer_size 16k;
+    proxy_buffers 8 32k;
+    proxy_busy_buffers_size 64k;
+    
+    # Disable buffering for streaming responses (optional, enable if needed)
+    # proxy_buffering off;
+
+    # Upstream keepalive pools - tuned for B1 tier
+    upstream azure_openai {
+        server ${AZURE_OPENAI_HOST};
+        keepalive 16;
+        keepalive_requests 1000;
+        keepalive_timeout 60s;
+    }
+
+    upstream azure_document_intelligence {
+        server ${AZURE_DOCUMENT_INTELLIGENCE_HOST}:443;
+        keepalive 16;
+        keepalive_requests 1000;
+        keepalive_timeout 60s;
+    }
+
+    upstream azure_search {
+        server ${AZURE_SEARCH_HOST}:443;
+        keepalive 16;
+        keepalive_requests 1000;
+        keepalive_timeout 60s;
+    }
+
+    upstream azure_cosmos {
+        server ${AZURE_COSMOS_HOST}:443;
+        keepalive 16;
+        keepalive_requests 1000;
+        keepalive_timeout 60s;
+    }
+
+    server {
+        listen 80;  # reuseport not beneficial with single worker
+        server_name _;
+
+        # Health check endpoint
+        location /healthz {
+            access_log off;
+            return 200 '{"status": "healthy"}';
+            add_header Content-Type application/json;
+        }
+
+        # Azure OpenAI
+        location /openai/ {
+            rewrite ^/openai/(.*) /$1 break;
+            proxy_pass https://azure_openai;
+            proxy_set_header Host ${AZURE_OPENAI_HOST};
+            include /etc/nginx/conf.d/azure-proxy-common.conf;
+        }
+
+        # Azure Document Intelligence
+        location /document-intelligence/ {
+            rewrite ^/document-intelligence/(.*) /$1 break;
+            proxy_pass https://azure_document_intelligence;
+            proxy_set_header Host ${AZURE_DOCUMENT_INTELLIGENCE_HOST};
+            include /etc/nginx/conf.d/azure-proxy-common.conf;
+        }
+
+        # Azure Cognitive Search
+        location /search/ {
+            rewrite ^/search/(.*) /$1 break;
+            proxy_pass https://azure_search;
+            proxy_set_header Host ${AZURE_SEARCH_HOST};
+            include /etc/nginx/conf.d/azure-proxy-common.conf;
+        }
+
+        # Cosmos DB (Gateway mode only; SDK must be set to Gateway)
+        location /cosmos/ {
+            rewrite ^/cosmos/(.*) /$1 break;
+            proxy_pass https://azure_cosmos;
+            proxy_set_header Host ${AZURE_COSMOS_HOST};
+            include /etc/nginx/conf.d/azure-proxy-common.conf;
+        }
+    }
+}
