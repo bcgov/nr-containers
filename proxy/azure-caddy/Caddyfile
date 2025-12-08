@@ -11,8 +11,14 @@
 
 # Common reverse proxy settings for Azure services
 (azure_proxy_common) {
+	# Set Host header to match the upstream (extracted from endpoint URL)
+	header_up Host {upstream_hostport}
 	header_up X-Forwarded-Proto https
 	import strip_caller_info
+
+	# Remove Caddy identification from responses
+	header_down -Via
+	header_down -Server
 
 	# Timeouts for Azure services
 	transport http {
@@ -43,7 +49,6 @@
 	# Azure OpenAI
 	handle_path /openai* {
 		reverse_proxy {$AZURE_OPENAI_ENDPOINT} {
-			header_up Host {$AZURE_OPENAI_HOST}
 			import azure_proxy_common
 		}
 	}
@@ -51,7 +56,6 @@
 	# Azure Document Intelligence
 	handle_path /document-intelligence* {
 		reverse_proxy {$AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT} {
-			header_up Host {$AZURE_DOCUMENT_INTELLIGENCE_HOST}
 			import azure_proxy_common
 		}
 	}
@@ -59,7 +63,6 @@
 	# Azure Cognitive Search
 	handle_path /search* {
 		reverse_proxy {$AZURE_SEARCH_ENDPOINT} {
-			header_up Host {$AZURE_SEARCH_HOST}
 			import azure_proxy_common
 		}
 	}
@@ -67,7 +70,6 @@
 	# Cosmos DB (Gateway mode only; SDK must be set to Gateway)
 	handle_path /cosmos* {
 		reverse_proxy {$AZURE_COSMOS_ENDPOINT} {
-			header_up Host {$AZURE_COSMOS_HOST}
 			import azure_proxy_common
 		}
 	}
