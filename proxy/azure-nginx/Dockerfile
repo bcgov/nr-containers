@@ -1,4 +1,4 @@
-FROM nginx:1.29-alpine
+FROM nginx:1.29.3-alpine3.22
 
 # Install envsubst for environment variable substitution and curl for healthcheck
 RUN apk add --no-cache gettext curl
