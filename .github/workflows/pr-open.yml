@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - if: contains(needs.*.result, 'failure')||contains(needs.*.result, 'cancelled')
-        run: echo "At least one job has failed." && exit 1
+        run: echo "At least one job has failed or was cancelled." && exit 1
       - run: echo "Success!"
 
       - uses: bcgov/action-pr-description-add@d79a5c3b49d3b3b3215495afac3ae599cef191bb # v2.0.1
