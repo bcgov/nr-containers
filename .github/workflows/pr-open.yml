@@ -74,24 +74,28 @@ jobs:
           package: ${{ matrix.package }}
           tags: ${{ steps.tag.outputs.full_tag }}
 
+  # ==========================================================================
+  # WARNING: This job acts as the required merge gate for this workflow.
+  # If you add a new job to this workflow, you MUST add its ID to the 'needs'
+  # array below, otherwise its failure or cancellation will not block the PR!
+  # ==========================================================================
   results:
     name: PR Results
     needs: [builds, checks]
-    permissions:
-      pull-requests: write
     if: always()
     runs-on: ubuntu-24.04
+    timeout-minutes: 1
     steps:
-      - if: contains(needs.*.result, 'failure')||contains(needs.*.result, 'cancelled')
-        run: echo "At least one job has failed or was cancelled." && exit 1
-      - run: echo "Success!"
+      - name: Log Job Results Context
+        run: |
+          echo "=== Upstream Job Statuses ==="
+          echo '${{ toJson(needs) }}'
 
-      - uses: bcgov/action-pr-description-add@d79a5c3b49d3b3b3215495afac3ae599cef191bb # v2.0.1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          add_markdown: |
-            ---
+      - name: Evaluate Overall Status
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "❌ Critical Check Failure: At least one required job has failed or was cancelled."
+          exit 1
 
-            Thanks for the PR!  Our PR workflow has completed successfully.  :)
-
-            Any new images should be viewable with [our repo packages](https://github.com/orgs/bcgov/packages?repo_name=nr-containers).
+      - name: Success Message
+        run: echo "✅ All critical checks passed or were intentionally skipped!"
