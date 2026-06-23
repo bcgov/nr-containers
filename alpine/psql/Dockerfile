@@ -1,5 +1,5 @@
 # Use the official Alpine image as a base
-FROM alpine:3.23
+FROM alpine:3.24
 
 # Install the PostgreSQL client
 RUN apk --no-cache add postgresql-client
