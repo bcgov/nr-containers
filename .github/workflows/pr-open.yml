@@ -51,6 +51,7 @@ jobs:
     if: needs.checks.outputs.json
     permissions:
       attestations: write
+      contents: read
       id-token: write
       packages: write
     runs-on: ubuntu-24.04
