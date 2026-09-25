@@ -44,13 +44,14 @@ jobs:
             echo "json=${JSON}" >> $GITHUB_OUTPUT
           fi
 
-  # https://github.com/bcgov/action-builder-ghcr
+  # https://github.com/bcgov/actions/tree/main/builder
   builds:
     name: Builds
     needs: [checks]
     if: needs.checks.outputs.json
     permissions:
       attestations: write
+      contents: read
       id-token: write
       packages: write
     runs-on: ubuntu-24.04
@@ -67,7 +68,7 @@ jobs:
           echo "full_tag=${TAG}" >> $GITHUB_OUTPUT
 
       - name: Build or import
-        uses: bcgov/action-builder-ghcr@cb2629351c87dd1c2130073e4ebb7233a9653a63 # v4.4.1
+        uses: bcgov/actions/builder@4026bfd276b8a5839029106099b13edfb594b2c3 # v0.8.0
         with:
           build_context: ${{ matrix.package }}/${{ matrix.major_tag }}
           build_file: ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile

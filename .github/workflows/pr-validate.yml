@@ -16,7 +16,9 @@ jobs:
     if: (! github.event.pull_request.draft)
     permissions:
       pull-requests: write
-    uses: bcgov/quickstart-openshift-helpers/.github/workflows/.pr-validate.yml@a11ad3d1b9288fb40757c4314a62eb86ff227931 # v1.2.1
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: bcgov/actions/pr-validate@4026bfd276b8a5839029106099b13edfb594b2c3 # v0.8.0
     
   results:
     name: Validate Results
