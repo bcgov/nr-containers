@@ -26,7 +26,7 @@ jobs:
           git fetch origin ${{ github.event.repository.default_branch }}
 
           # Get changed Dockerfiles, create JSON object for the builder
-          DOCKERFILES=($(git diff --name-only origin/${{ github.event.repository.default_branch }} | grep -E '^.*/.*/Dockerfile$' | sort -u))
+          mapfile -t DOCKERFILES < <(git diff --name-only origin/${{ github.event.repository.default_branch }} | grep -E '^.*/.*/Dockerfile$' | sort -u)
           LIST=$(
             for d in "${DOCKERFILES[@]}"; do
               BASE=${d%/*}
@@ -35,13 +35,13 @@ jobs:
           )
 
           # Clip any trailing commas
-          JSON=$(echo [$LIST] | sed 's/\(.*\),/\1/')
+          JSON="[$(echo "$LIST" | paste -sd' ' | sed 's/,$//')]"
 
           # Send to output if non-empty
           echo "json=${JSON}"
           if [ "${#JSON}" -gt 4 ]
           then
-            echo "json=${JSON}" >> $GITHUB_OUTPUT
+            echo "json=${JSON}" >> "$GITHUB_OUTPUT"
           fi
 
   # https://github.com/bcgov/actions/tree/main/builder
@@ -65,10 +65,10 @@ jobs:
         id: tag
         run: |
           TAG=$(grep '^FROM' ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile | cut -d':' -f2)
-          echo "full_tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "full_tag=${TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Build or import
-        uses: bcgov/actions/builder@4026bfd276b8a5839029106099b13edfb594b2c3 # v0.8.0
+        uses: bcgov/actions/builder@79aefe3a7abb2d0d00b1b3ea4cfbf12727a10638 # v0.9.0
         with:
           build_context: ${{ matrix.package }}/${{ matrix.major_tag }}
           build_file: ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile
