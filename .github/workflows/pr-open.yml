@@ -16,7 +16,7 @@ jobs:
     name: Dockerfile Checks
     outputs:
       json: ${{ steps.dockerfiles.outputs.json }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       - name: Get Dockerfiles
@@ -54,7 +54,7 @@ jobs:
       contents: read
       id-token: write
       packages: write
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       matrix:
         include: ${{ fromJSON(needs.checks.outputs.json) }}
@@ -84,7 +84,7 @@ jobs:
     name: PR Results
     needs: [builds, checks]
     if: always()
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 1
     steps:
       - uses: bcgov/actions/workflow-results@79aefe3a7abb2d0d00b1b3ea4cfbf12727a10638 # v0.9.0
