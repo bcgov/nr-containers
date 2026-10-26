@@ -68,10 +68,10 @@ jobs:
           echo "full_tag=${TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Build or import
-        uses: bcgov/actions/builder@122a9b1c6c082b1b1f18c300020fbdc417b6b0b2 # v0.10.0
+        uses: bcgov/actions/builder@8843560d44aa717798dacb6831bf87161d0658ca # v0.11.0
         with:
-          build_context: ${{ matrix.package }}/${{ matrix.major_tag }}
-          build_file: ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile
+          context: ${{ matrix.package }}/${{ matrix.major_tag }}
+          file: ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile
           package: ${{ matrix.package }}
           tags: ${{ steps.tag.outputs.full_tag }}
 
@@ -87,6 +87,6 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 1
     steps:
-      - uses: bcgov/actions/workflow-results@122a9b1c6c082b1b1f18c300020fbdc417b6b0b2 # v0.10.0
+      - uses: bcgov/actions/workflow-results@8843560d44aa717798dacb6831bf87161d0658ca # v0.11.0
         with:
           needs: ${{ toJson(needs) }}
