@@ -1,4 +1,4 @@
-FROM gvenzl/oracle-free:23.26.3-slim-faststart
+FROM gvenzl/oracle-free:23.26.3-faststart
 
 USER root
 
