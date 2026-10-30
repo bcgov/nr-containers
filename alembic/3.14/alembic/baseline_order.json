@@ -1,0 +1,30 @@
+{
+  "description": "Declared execution order for the extracted baseline migrations (issue #787). The baseline is a frozen extraction of the production structure; its correct apply order was established empirically and is NOT derivable from a numeric sort, because every schema numbers its object-type folders starting at major 1. This file is the machine-readable form of the sequence that run_all_migrations.sh previously hardcoded as bash.",
+  "notes": [
+    "Segments execute top to bottom.",
+    "A segment claims every major in (previous through_major for that schema, through_major].",
+    "Every non-timestamp V file under scripts/ must be claimed by exactly one segment; migration_plan.py fails hard otherwise.",
+    "grants=true segments are skipped when a runner is invoked with --no-grants.",
+    "oracle_user is the connection identity, which is NOT always the schema folder: DBA migrations connect as SYS with SYSDBA. Grants must run as the grantor, which is why CONSEP and THE each appear twice.",
+    "Baseline majors are all <= 16, so the whole baseline sorts before any timestamped migration (12+ digit major). Renumbering into globally unique ranges is deliberately NOT required - see docs/cross_schema_migration_plan.md."
+  ],
+  "segments": [
+    { "schema": "DBA", "oracle_user": "SYS", "through_major": 9, "grants": false, "comment": "SYS objects: users, roles, tablespaces, directories, profiles" },
+    { "schema": "THE", "oracle_user": "THE", "through_major": 15, "grants": false, "comment": "all THE objects except grants" },
+    { "schema": "CONSEP", "oracle_user": "CONSEP", "through_major": 9, "grants": false, "comment": "all CONSEP objects except grants" },
+    { "schema": "CONSEP", "oracle_user": "CONSEP", "through_major": 10, "grants": true, "comment": "CONSEP grants, run as CONSEP" },
+    { "schema": "THE", "oracle_user": "THE", "through_major": 16, "grants": true, "comment": "THE grants, run as THE - deliberately after CONSEP grants" },
+    { "schema": "MOF_QUEUES", "oracle_user": "MOF_QUEUES", "through_major": 4, "grants": false, "comment": "queues and queue tables" },
+    { "schema": "MOF_QUEUES", "oracle_user": "MOF_QUEUES", "through_major": 5, "grants": true, "comment": "MOF_QUEUES grants" },
+    { "schema": "APP_DBA", "oracle_user": "APP_DBA", "through_major": 1, "grants": false },
+    { "schema": "APP_DBA", "oracle_user": "APP_DBA", "through_major": 2, "grants": true },
+    { "schema": "APP_FDSUTIL", "oracle_user": "APP_FDSUTIL", "through_major": 2, "grants": false },
+    { "schema": "APP_FDSUTIL", "oracle_user": "APP_FDSUTIL", "through_major": 3, "grants": true },
+    { "schema": "APP_FTA", "oracle_user": "APP_FTA", "through_major": 1, "grants": false },
+    { "schema": "APP_FTA", "oracle_user": "APP_FTA", "through_major": 2, "grants": true },
+    { "schema": "APP_RESPROJ", "oracle_user": "APP_RESPROJ", "through_major": 1, "grants": false },
+    { "schema": "APP_RESPROJ", "oracle_user": "APP_RESPROJ", "through_major": 2, "grants": true },
+    { "schema": "APP_RESULTS", "oracle_user": "APP_RESULTS", "through_major": 1, "grants": false },
+    { "schema": "APP_RESULTS", "oracle_user": "APP_RESULTS", "through_major": 2, "grants": true }
+  ]
+}
