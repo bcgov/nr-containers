@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-26.04
     strategy:
       matrix:
-        package: [alembic, bitnami/postgresql, bitnami/postgresql-ha, bitnami/pgpool, mongo, oracle-free, postgres]
+        package: [alembic, bitnami/postgresql, bitnami/postgresql-ha, bitnami/pgpool, mongo, oracle-free, oracle-oc, postgres]
     steps:
       - uses: actions/delete-package-versions@v5
         with:
