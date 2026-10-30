@@ -1,0 +1,12 @@
+[project]
+name = "alembic-oracle-runner"
+version = "0.1.0"
+description = "Shared Python deps for Alembic/Flyway-style Oracle migration runners"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.13.0",
+    "sqlalchemy>=2.0.49",
+    "oracledb>=3.1.1",
+    "jproperties>=2.1.2",
+    "xxhash>=3.6.0",
+]
