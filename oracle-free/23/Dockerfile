@@ -1,6 +1,20 @@
+FROM ghcr.io/oracle/oraclelinux:8-slim AS builder
+
+RUN microdnf install -y gcc glibc-devel && \
+    microdnf clean all
+
+COPY fakeuid.c /tmp/fakeuid.c
+RUN gcc -shared -fPIC -O2 /tmp/fakeuid.c -o /usr/local/lib/libfakeuid.so -ldl
+
 FROM gvenzl/oracle-free:23.26.3-faststart
 
 USER root
+
+# Copy the UID shim and preload it for all binaries to satisfy Oracle's UID validation
+COPY --from=builder /usr/local/lib/libfakeuid.so /usr/local/lib/libfakeuid.so
+RUN echo '/usr/local/lib/libfakeuid.so' > /etc/ld.so.preload && \
+    chmod 644 /etc/ld.so.preload && \
+    chmod 755 /usr/local/lib/libfakeuid.so
 
 # Enable arbitrary OpenShift UIDs (Red Hat standard: root group ownership and group-writable)
 # Map Oracle OSDBA/OSOPER/OINSTALL to GID 0 (root group) for OpenShift arbitrary UID compatibility
