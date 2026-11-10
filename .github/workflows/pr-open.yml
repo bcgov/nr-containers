@@ -75,6 +75,69 @@ jobs:
           package: ${{ matrix.package }}
           tags: ${{ steps.tag.outputs.full_tag }}
 
+  # Compile the oracle-free/23 UID shim with the Dockerfile's script and base image, then prove it remaps UID 54321
+  fakeuid:
+    name: fakeuid Shim
+    runs-on: ubuntu-26.04
+    container: ghcr.io/oracle/oraclelinux:8-slim
+    timeout-minutes: 10
+    steps:
+      - name: Install build tools
+        run: microdnf install -y gcc glibc-devel git tar && microdnf clean all
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Compile
+        run: oracle-free/23/build-fakeuid.sh "${RUNNER_TEMP}/libfakeuid.so"
+
+      - name: Smoke test
+        run: |
+          set -eu
+          f="${RUNNER_TEMP}/owned-by-54321"
+          touch "${f}"
+          chown 54321 "${f}"
+          plain=$(stat -c %u "${f}")
+          shimmed=$(LD_PRELOAD="${RUNNER_TEMP}/libfakeuid.so" stat -c %u "${f}")
+          echo "euid=$(id -u) plain=${plain} shimmed=${shimmed}"
+          [ "${plain}" = "54321" ]
+          [ "${shimmed}" = "$(id -u)" ]
+
+  # Run the PR-built oracle-free/23 image under an arbitrary OpenShift-style UID and wait for a healthy database
+  oracle-free-smoke:
+    name: oracle-free Smoke
+    needs: [builds, checks]
+    if: contains(needs.checks.outputs.json, '"oracle-free"')
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}/oracle-free:${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Shim active
+        run: |
+          set -eu
+          docker pull "${IMAGE}"
+          docker run --rm --user 1002720000:0 --entrypoint bash "${IMAGE}" -c '
+            set -eu
+            grep -qx /usr/local/lib/libfakeuid.so /etc/ld.so.preload
+            owner=$(stat -c %u "${ORACLE_HOME}/bin/oracle")
+            echo "euid=$(id -u) oracle-binary-owner=${owner}"
+            [ "${owner}" = "$(id -u)" ]
+          '
+
+      - name: Database healthy under arbitrary UID
+        run: |
+          set -eu
+          docker run -d --name oracle --user 1002720000:0 -e ORACLE_RANDOM_PASSWORD=yes "${IMAGE}"
+          for _ in $(seq 60); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' oracle)
+            [ "${status}" = "healthy" ] && break
+            [ "$(docker inspect -f '{{.State.Running}}' oracle)" = "true" ] || break
+            sleep 5
+          done
+          docker logs oracle 2>&1 | tail -n 40
+          echo "health=${status}"
+          [ "${status}" = "healthy" ]
+
   # ==========================================================================
   # WARNING: This job acts as the required merge gate for this workflow.
   # If you add a new job to this workflow, you MUST add its ID to the 'needs'
@@ -82,7 +145,7 @@ jobs:
   # ==========================================================================
   results:
     name: PR Results
-    needs: [builds, checks]
+    needs: [builds, checks, fakeuid, oracle-free-smoke]
     if: always()
     runs-on: ubuntu-26.04
     timeout-minutes: 1

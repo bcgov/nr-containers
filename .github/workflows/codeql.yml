@@ -15,31 +15,54 @@ concurrency:
 permissions: {}
 
 jobs:
-  analyze:
-    name: Analyze (${{ matrix.language }})
+  actions:
+    name: Analyze (actions)
     runs-on: ubuntu-26.04
     permissions:
       actions: read
       contents: read
       security-events: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - language: actions
-            build-mode: none
-          # fakeuid.c is compiled inside the oracle-free image, not at the repo root
-          - language: c-cpp
-            build-mode: none
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
-          languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.build-mode }}
+          languages: actions
+          build-mode: none
 
       - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
-          category: "/language:${{ matrix.language }}"
+          category: "/language:actions"
+
+  # Default setup can't run a custom build, and Autobuild finds no build at the
+  # repo root. Trace the real build instead: same script and base image as the
+  # oracle-free/23 Dockerfile builder stage. Steps run inside the container so
+  # the CodeQL tracer sees the gcc call.
+  c-cpp:
+    name: Analyze (c-cpp)
+    runs-on: ubuntu-26.04
+    container: ghcr.io/oracle/oraclelinux:8-slim
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    timeout-minutes: 15
+    steps:
+      # gcc/glibc-devel match the Dockerfile; git, tar and gzip are for checkout and the CodeQL bundle
+      - name: Install build tools
+        run: microdnf install -y gcc glibc-devel git tar gzip && microdnf clean all
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: c-cpp
+          build-mode: manual
+
+      - name: Build fakeuid (traced)
+        run: oracle-free/23/build-fakeuid.sh "${RUNNER_TEMP}/libfakeuid.so"
+
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: "/language:c-cpp"
