@@ -63,7 +63,9 @@ jobs:
         run: |
           oracle-free/23/build-fakeuid.sh "${RUNNER_TEMP}/libfakeuid.so"
           # Fail fast if the tracer did not capture the compile
-          find "${CODEQL_EXTRACTOR_CPP_SOURCE_ARCHIVE_DIR}" -name fakeuid.c | grep .
+          archived="${CODEQL_EXTRACTOR_CPP_SOURCE_ARCHIVE_DIR}${GITHUB_WORKSPACE}/oracle-free/23/fakeuid.c"
+          test -f "${archived}"
+          echo "Traced compile archived: ${archived}"
 
       - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
