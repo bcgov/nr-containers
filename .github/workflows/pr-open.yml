@@ -12,68 +12,78 @@ concurrency:
 permissions: {}
 
 jobs:
-  checks:
-    name: Dockerfile Checks
-    outputs:
-      json: ${{ steps.dockerfiles.outputs.json }}
-    runs-on: ubuntu-26.04
-    steps:
-      - uses: actions/checkout@v7
-      - name: Get Dockerfiles
-        id: dockerfiles
-        run: |
-          # Fetch default_branch (usually main)
-          git fetch origin ${{ github.event.repository.default_branch }}
-
-          # Get changed Dockerfiles, create JSON object for the builder
-          mapfile -t DOCKERFILES < <(git diff --name-only origin/${{ github.event.repository.default_branch }} | grep -E '^.*/.*/Dockerfile$' | sort -u)
-          LIST=$(
-            for d in "${DOCKERFILES[@]}"; do
-              BASE=${d%/*}
-              echo "{\"package\": \"${BASE%/*}\", \"major_tag\": \"${BASE##*/}\"},"
-            done
-          )
-
-          # Clip any trailing commas
-          JSON="[$(echo "$LIST" | paste -sd' ' | sed 's/,$//')]"
-
-          # Send to output if non-empty
-          echo "json=${JSON}"
-          if [ "${#JSON}" -gt 4 ]
-          then
-            echo "json=${JSON}" >> "$GITHUB_OUTPUT"
-          fi
-
-  # https://github.com/bcgov/actions/tree/main/builder
+  # Images whose build context changed: pr-<number> and commit SHA tags only.
+  # Release tags are written by merge.yml on push to main.
   builds:
     name: Builds
-    needs: [checks]
-    if: needs.checks.outputs.json
+    uses: ./.github/workflows/.builds.yml
     permissions:
       attestations: write
       contents: read
       id-token: write
       packages: write
-    runs-on: ubuntu-26.04
-    strategy:
-      matrix:
-        include: ${{ fromJSON(needs.checks.outputs.json) }}
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-      - name: Get tag
-        id: tag
-        run: |
-          TAG=$(grep '^FROM' ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile | cut -d':' -f2)
-          echo "full_tag=${TAG}" >> "$GITHUB_OUTPUT"
+    with:
+      base: origin/${{ github.event.repository.default_branch }}
+      release: false
 
-      - name: Build or import
-        uses: bcgov/actions/builder@d209bb08aabe15e5e69aca53b24d338a7b2843d5 # v0.12.0
-        with:
-          context: ${{ matrix.package }}/${{ matrix.major_tag }}
-          file: ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile
-          package: ${{ matrix.package }}
-          tags: ${{ steps.tag.outputs.full_tag }}
+  # Fixture tests for the scripts .builds.yml and merge.yml depend on
+  build-scripts:
+    name: Build Scripts
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Release tags
+        run: |
+          set -euo pipefail
+          tag=${GITHUB_WORKSPACE}/.github/scripts/image-tag.sh
+          # Every image in the repo must resolve a release tag
+          find . -name Dockerfile -not -path './.git/*' | sort | while read -r f; do
+            d=${f#./}; d=${d%/Dockerfile}
+            echo "${d} -> $("${tag}" "${d}")"
+          done
+          # Multi-stage: the final FROM wins, lowercase builder stage ignored
+          [ "$("${tag}" oracle-free/23)" = "23.26.3-faststart" ]
+          fx="${RUNNER_TEMP}/tag"
+          mkdir -p "${fx}"
+          printf 'FROM --platform=linux/amd64 a/b:1 AS x\nFROM ghcr.io/c/d:2.0@sha256:abc AS final\n' > "${fx}/Dockerfile"
+          [ "$("${tag}" "${fx}")" = "2.0" ]
+          printf 'FROM localhost:5000/e\n' > "${fx}/Dockerfile"
+          if out=$("${tag}" "${fx}" 2>&1); then
+            echo "::error::Untagged FROM resolved to '${out}'"
+            exit 1
+          fi
+          grep -q "has no tag" <<< "${out}"
+          echo "Release tag fixtures passed"
+
+      - name: Changed images
+        run: |
+          set -euo pipefail
+          check="${GITHUB_WORKSPACE}/.github/scripts/changed-images.sh"
+          fx="${RUNNER_TEMP}/images"
+          git init -q "${fx}"
+          cd "${fx}"
+          git config user.email ci@example.invalid
+          git config user.name ci
+          mkdir -p pkg/1 pkg/2 nested/pkg/3/sub top
+          for d in pkg/1 pkg/2 nested/pkg/3; do echo 'FROM x:1' > "${d}/Dockerfile"; done
+          echo 'FROM x:1' > top/Dockerfile
+          touch pkg/1/shim.c pkg/2/README.md nested/pkg/3/sub/conf top/run.sh
+          git add -A && git commit -qm base
+          expect() {
+            got=$("${check}" HEAD~1)
+            [ "${got}" = "$1" ] || { echo "::error::$2: got ${got}, expected $1"; exit 1; }
+            echo "ok: $2 -> ${got}"
+          }
+          echo x >> pkg/1/shim.c; git commit -qam c1
+          expect '[{"package": "pkg", "major_tag": "1"}]' "non-Dockerfile source triggers its image"
+          echo x >> pkg/2/README.md; git commit -qam c2
+          expect '[]' "Markdown-only change triggers nothing"
+          echo x >> nested/pkg/3/sub/conf; echo x >> top/run.sh; git commit -qam c3
+          expect '[{"package": "nested/pkg", "major_tag": "3"}]' "nested file maps to its image; top-level dir skipped"
+          git rm -rq pkg/2; git commit -qm c4
+          expect '[]' "deleted image is skipped"
 
   # Every CodeQL-supported language in the repo needs an entry in the CodeQL matrix
   codeql-coverage:
@@ -109,12 +119,16 @@ jobs:
           grep -q "language 'python' has files but no matrix entry" <<< "${out}"
           echo "Fail case failed as expected: python reported missing"
 
-  # Compile the oracle-free/23 UID shim with the Dockerfile's script and base image, then prove it remaps UID 54321
+  # Compile the oracle-free/23 UID shim with the Dockerfile's script and base image, then prove every
+  # stat entry point it wraps (and coreutils stat, which uses statx) reports 54321-owned files as the caller's
   fakeuid:
     name: fakeuid Shim
     runs-on: ubuntu-26.04
     container: ghcr.io/oracle/oraclelinux:8-slim
     timeout-minutes: 10
+    env:
+      # World-readable so the arbitrary UID below can load and run them
+      OUT: /tmp/fakeuid
     steps:
       - name: Install build tools
         run: microdnf install -y gcc glibc-devel git tar && microdnf clean all
@@ -122,37 +136,42 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Compile
-        run: oracle-free/23/build-fakeuid.sh "${RUNNER_TEMP}/libfakeuid.so"
-
-      # fakeuid.c wraps stat()/__xstat() and friends; probe through plain stat()
-      - name: Smoke test
         run: |
           set -eu
-          cat > "${RUNNER_TEMP}/probe.c" <<'C'
-          #include <stdio.h>
-          #include <sys/stat.h>
-          int main(int argc, char **argv) {
-              struct stat st;
-              if (argc != 2 || stat(argv[1], &st) != 0) return 2;
-              printf("%u\n", (unsigned) st.st_uid);
-              return 0;
-          }
-          C
-          gcc -O2 "${RUNNER_TEMP}/probe.c" -o "${RUNNER_TEMP}/probe"
-          f="${RUNNER_TEMP}/owned-by-54321"
+          install -d -m 755 "${OUT}"
+          oracle-free/23/build-fakeuid.sh "${OUT}/libfakeuid.so"
+          gcc -O2 -Wall -Wextra -Werror .github/scripts/fakeuid-probe.c -o "${OUT}/fakeuid-probe" -ldl
+
+      # Runs as an arbitrary OpenShift-style UID; the probe exits 1 if any call reports the wrong uid
+      - name: Smoke test
+        env:
+          RUN_UID: "1002720000"
+        run: |
+          set -eu
+          f="${OUT}/owned-by-54321"
           touch "${f}"
           chown 54321 "${f}"
-          plain=$("${RUNNER_TEMP}/probe" "${f}")
-          shimmed=$(LD_PRELOAD="${RUNNER_TEMP}/libfakeuid.so" "${RUNNER_TEMP}/probe" "${f}")
-          echo "euid=$(id -u) plain=${plain} shimmed=${shimmed}"
+          as_run_uid() { setpriv --reuid="${RUN_UID}" --regid=0 --clear-groups "$@"; }
+          shim="LD_PRELOAD=${OUT}/libfakeuid.so"
+
+          echo "== Without the shim: every call reports the on-disk owner"
+          as_run_uid "${OUT}/fakeuid-probe" "${f}" 54321
+
+          echo "== With the shim, as uid ${RUN_UID}: every call reports the caller"
+          as_run_uid env "${shim}" "${OUT}/fakeuid-probe" "${f}" "${RUN_UID}"
+
+          echo "== coreutils stat(1)"
+          plain=$(as_run_uid stat -c %u "${f}")
+          shimmed=$(as_run_uid env "${shim}" stat -c %u "${f}")
+          echo "plain=${plain} shimmed=${shimmed}"
           [ "${plain}" = "54321" ]
-          [ "${shimmed}" = "$(id -u)" ]
+          [ "${shimmed}" = "${RUN_UID}" ]
 
   # Run the PR-built oracle-free/23 image under an arbitrary OpenShift-style UID and wait for a healthy database
   oracle-free-smoke:
     name: oracle-free Smoke
-    needs: [builds, checks]
-    if: contains(needs.checks.outputs.json, '"oracle-free"')
+    needs: [builds]
+    if: contains(needs.builds.outputs.json, '"oracle-free"')
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     env:
@@ -167,6 +186,10 @@ jobs:
             grep -qx /usr/local/lib/libfakeuid.so /etc/ld.so.preload
             grep -q libfakeuid.so /proc/self/maps
             echo "euid=$(id -u) libfakeuid.so mapped via /etc/ld.so.preload"
+            # coreutils stat(1) uses statx; ORACLE_HOME is owned by 54321 on disk
+            uid=$(stat -c %u "${ORACLE_HOME}/bin/oracle")
+            echo "stat -c %u ${ORACLE_HOME}/bin/oracle -> ${uid}"
+            [ "${uid}" = "$(id -u)" ]
           '
 
       - name: Database healthy under arbitrary UID
@@ -190,7 +213,7 @@ jobs:
   # ==========================================================================
   results:
     name: PR Results
-    needs: [builds, checks, codeql-coverage, fakeuid, oracle-free-smoke]
+    needs: [build-scripts, builds, codeql-coverage, fakeuid, oracle-free-smoke]
     if: always()
     runs-on: ubuntu-26.04
     timeout-minutes: 1

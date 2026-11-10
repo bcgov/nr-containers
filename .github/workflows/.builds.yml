@@ -1,0 +1,95 @@
+name: .Builds
+
+# Builds every image whose build context changed since `base`.
+# Pull requests tag pr-<number>; only `release: true` (merge.yml, push to main)
+# writes the Dockerfile's FROM tag, e.g. oracle-free:23.26.3-faststart.
+# bcgov/actions/builder always adds the source commit SHA as a tag too.
+
+on:
+  workflow_call:
+    inputs:
+      base:
+        description: Git revision to diff against, e.g. origin/main or the pushed-over SHA
+        required: true
+        type: string
+      release:
+        description: Tag with the Dockerfile's FROM tag (main only) instead of pr-<number>
+        required: true
+        type: boolean
+    outputs:
+      json:
+        description: JSON matrix of changed images, e.g. [{"package":"oracle-free","major_tag":"23"}]
+        value: ${{ jobs.checks.outputs.json }}
+
+permissions: {}
+
+jobs:
+  checks:
+    name: Dockerfile Checks
+    outputs:
+      json: ${{ steps.images.outputs.json }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history so any base revision (origin/main, a pushed-over SHA) resolves
+          fetch-depth: 0
+
+      - name: Get changed images
+        id: images
+        env:
+          BASE: ${{ inputs.base }}
+        run: |
+          set -euo pipefail
+          json=$(.github/scripts/changed-images.sh "${BASE}")
+          echo "json=${json}"
+          if [ "${json}" != "[]" ]; then
+            echo "json=${json}" >> "${GITHUB_OUTPUT}"
+          fi
+
+  # https://github.com/bcgov/actions/tree/main/builder
+  builds:
+    name: Builds
+    needs: [checks]
+    if: needs.checks.outputs.json
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+      packages: write
+    runs-on: ubuntu-26.04
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.checks.outputs.json) }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Get tag
+        id: tag
+        env:
+          DIR: ${{ matrix.package }}/${{ matrix.major_tag }}
+          RELEASE: ${{ inputs.release }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          if [ "${RELEASE}" = "true" ]; then
+            tag=$(.github/scripts/image-tag.sh "${DIR}")
+          elif [ -n "${PR}" ]; then
+            tag="pr-${PR}"
+          else
+            echo "::error::release is false outside a pull request; refusing to guess a tag"
+            exit 1
+          fi
+          echo "Release tag for ${DIR}: $(.github/scripts/image-tag.sh "${DIR}") (release=${RELEASE})"
+          echo "Tagging ${DIR}: ${tag}"
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build or import
+        uses: bcgov/actions/builder@d209bb08aabe15e5e69aca53b24d338a7b2843d5 # v0.12.0
+        with:
+          context: ${{ matrix.package }}/${{ matrix.major_tag }}
+          file: ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile
+          package: ${{ matrix.package }}
+          tags: ${{ steps.tag.outputs.tag }}
