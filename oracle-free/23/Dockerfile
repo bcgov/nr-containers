@@ -1,15 +1,18 @@
+from ghcr.io/oracle/oraclelinux:8-slim as builder
+
+run microdnf install -y gcc glibc-devel && \
+    microdnf clean all
+
+copy fakeuid.c /tmp/fakeuid.c
+run gcc -shared -fPIC -O2 /tmp/fakeuid.c -o /usr/local/lib/libfakeuid.so -ldl
+
 FROM gvenzl/oracle-free:23.26.3-faststart
 
 USER root
 
-# Compile the UID shim and preload it for all binaries to satisfy Oracle's UID validation
-COPY fakeuid.c /tmp/fakeuid.c
-RUN microdnf install -y gcc glibc-devel && \
-    gcc -shared -fPIC -O2 /tmp/fakeuid.c -o /usr/local/lib/libfakeuid.so -ldl && \
-    rm -f /tmp/fakeuid.c && \
-    microdnf remove -y gcc binutils cpp glibc-devel glibc-headers kernel-headers libmpc libgomp isl && \
-    microdnf clean all && \
-    echo '/usr/local/lib/libfakeuid.so' > /etc/ld.so.preload && \
+# Preload the UID shim for all binaries to satisfy Oracle's ORA-12753 UID validation under OpenShift
+COPY --from=builder /usr/local/lib/libfakeuid.so /usr/local/lib/libfakeuid.so
+RUN echo '/usr/local/lib/libfakeuid.so' > /etc/ld.so.preload && \
     chmod 644 /etc/ld.so.preload && \
     chmod 755 /usr/local/lib/libfakeuid.so
 
