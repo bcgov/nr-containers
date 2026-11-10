@@ -1,0 +1,25 @@
+name: Merge
+
+# The only writer of release tags (the Dockerfile's FROM tag, e.g.
+# oracle-free:23.26.3-faststart). Pull requests publish pr-<number> instead.
+on:
+  push:
+    branches: [main]
+
+# No workflow concurrency group: a queued run would cancel a pending one and
+# skip its images. .builds.yml serializes per image instead.
+
+permissions: {}
+
+jobs:
+  builds:
+    name: Builds
+    uses: ./.github/workflows/.builds.yml
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+      packages: write
+    with:
+      base: ${{ github.event.before }}
+      release: true
