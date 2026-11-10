@@ -1,9 +1,10 @@
 name: .Builds
 
 # Builds every image whose build context changed since `base`.
-# Pull requests tag pr-<number>; only `release: true` (merge.yml, push to main)
-# writes the Dockerfile's FROM tag, e.g. oracle-free:23.26.3-faststart.
-# bcgov/actions/builder always adds the source commit SHA as a tag too.
+# Pull requests tag pr-<number>-<major_tag>; only `release: true` (merge.yml,
+# push to main) writes the Dockerfile's FROM tag, e.g. oracle-free:23.26.3-faststart.
+# bcgov/actions/builder always adds the source commit SHA as a tag too; that tag
+# is shared by every major_tag of a package changed in the same commit.
 
 on:
   workflow_call:
@@ -59,6 +60,12 @@ jobs:
       id-token: write
       packages: write
     runs-on: ubuntu-26.04
+    # One build per image at a time, oldest first, so an older run cannot overwrite
+    # a newer one's tag. A newer queued run replaces an older queued one; its tree
+    # already holds the older run's changes.
+    concurrency:
+      group: builds-${{ inputs.release }}-${{ github.event.number }}-${{ matrix.package }}-${{ matrix.major_tag }}
+      cancel-in-progress: false
     strategy:
       matrix:
         include: ${{ fromJSON(needs.checks.outputs.json) }}
@@ -72,12 +79,14 @@ jobs:
           DIR: ${{ matrix.package }}/${{ matrix.major_tag }}
           RELEASE: ${{ inputs.release }}
           PR: ${{ github.event.pull_request.number }}
+          MAJOR: ${{ matrix.major_tag }}
         run: |
           set -euo pipefail
           if [ "${RELEASE}" = "true" ]; then
             tag=$(.github/scripts/image-tag.sh "${DIR}")
           elif [ -n "${PR}" ]; then
-            tag="pr-${PR}"
+            # major_tag keeps e.g. postgres/15 and postgres/16 apart
+            tag="pr-${PR}-${MAJOR}"
           else
             echo "::error::release is false outside a pull request; refusing to guess a tag"
             exit 1
@@ -93,3 +102,17 @@ jobs:
           file: ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile
           package: ${{ matrix.package }}
           tags: ${{ steps.tag.outputs.tag }}
+
+      # The builder checks out pull_request.head.sha or github.ref, and on push
+      # github.ref is the moving main. Fail if it built anything but this commit.
+      - name: Built the triggering commit
+        env:
+          WANT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          got=$(git -C .builder-context rev-parse HEAD)
+          echo "built=${got} expected=${WANT}"
+          if [ "${got}" != "${WANT}" ]; then
+            echo "::error::Builder checked out ${got}, not ${WANT}; main moved during the build. Its tags now hold ${got}'s tree."
+            exit 1
+          fi

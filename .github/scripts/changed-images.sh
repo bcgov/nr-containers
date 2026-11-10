@@ -30,7 +30,8 @@ image_dir() {
 }
 
 mapfile -t dirs < <(
-  git diff --name-only "${base}" HEAD \
+  # --no-renames: a move between images lists both paths, so both rebuild
+  git diff --name-only --no-renames "${base}" HEAD \
     | { grep -v '\.md$' || true; } \
     | while read -r f; do image_dir "${f}"; done \
     | sort -u

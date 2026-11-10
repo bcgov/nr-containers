@@ -6,8 +6,8 @@ on:
   push:
     branches: [main]
 
-# No concurrency group: a queued run would cancel the pending one and skip its
-# images. Each push builds only its own diff.
+# No workflow concurrency group: a queued run would cancel a pending one and
+# skip its images. .builds.yml serializes per image instead.
 
 permissions: {}
 

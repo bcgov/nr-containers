@@ -82,7 +82,9 @@ jobs:
           expect '[]' "Markdown-only change triggers nothing"
           echo x >> nested/pkg/3/sub/conf; echo x >> top/run.sh; git commit -qam c3
           expect '[{"package": "nested/pkg", "major_tag": "3"}]' "nested file maps to its image; top-level dir skipped"
-          git rm -rq pkg/2; git commit -qm c4
+          git mv pkg/1/shim.c nested/pkg/3/shim.c; git commit -qm c4
+          expect '[{"package": "nested/pkg", "major_tag": "3"},{"package": "pkg", "major_tag": "1"}]' "move between images rebuilds both"
+          git rm -rq pkg/2; git commit -qm c5
           expect '[]' "deleted image is skipped"
 
   # Every CodeQL-supported language in the repo needs an entry in the CodeQL matrix
@@ -175,7 +177,7 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     env:
-      IMAGE: ghcr.io/${{ github.repository }}/oracle-free:${{ github.event.pull_request.head.sha }}
+      IMAGE: ghcr.io/${{ github.repository }}/oracle-free:pr-${{ github.event.number }}-23
     steps:
       - name: Shim preloaded
         run: |
