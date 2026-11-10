@@ -1,0 +1,72 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "30 6 * * 1"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  # Default setup can't run a custom build, and Autobuild finds no build at the
+  # repo root. c-cpp traces the real build instead: the same script and base
+  # image as the oracle-free/23 Dockerfile builder stage. Its steps run inside
+  # that container so the CodeQL tracer sees the gcc call.
+  # .github/scripts/codeql-coverage.sh fails PRs when a language in the repo has no entry here.
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-26.04
+    container: ${{ matrix.container }}
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: actions
+            build-mode: none
+            container: ""
+          - language: c-cpp
+            build-mode: manual
+            container: ghcr.io/oracle/oraclelinux:8-slim
+    timeout-minutes: 15
+    steps:
+      # gcc/glibc-devel match the Dockerfile; git, tar and gzip are for checkout and the CodeQL bundle
+      - name: Install build tools
+        if: matrix.language == 'c-cpp'
+        run: microdnf install -y gcc glibc-devel git tar gzip && microdnf clean all
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The container runs as root, but the workspace is owned by the runner user
+      - name: Trust workspace
+        if: matrix.language == 'c-cpp'
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-extended
+
+      - name: Build fakeuid (traced)
+        if: matrix.language == 'c-cpp'
+        run: |
+          oracle-free/23/build-fakeuid.sh "${RUNNER_TEMP}/libfakeuid.so"
+          # Fail fast if the tracer did not capture the compile
+          archived="${CODEQL_EXTRACTOR_CPP_SOURCE_ARCHIVE_DIR}${GITHUB_WORKSPACE}/oracle-free/23/fakeuid.c"
+          test -f "${archived}"
+          echo "Traced compile archived: ${archived}"
+
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: "/language:${{ matrix.language }}"

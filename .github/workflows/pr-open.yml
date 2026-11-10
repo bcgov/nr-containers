@@ -75,6 +75,114 @@ jobs:
           package: ${{ matrix.package }}
           tags: ${{ steps.tag.outputs.full_tag }}
 
+  # Every CodeQL-supported language in the repo needs an entry in the CodeQL matrix
+  codeql-coverage:
+    name: CodeQL Coverage
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check repo
+        run: .github/scripts/codeql-coverage.sh . .github/workflows/codeql.yml
+
+      - name: Check fixtures (pass and fail)
+        run: |
+          set -eu
+          check="${GITHUB_WORKSPACE}/.github/scripts/codeql-coverage.sh"
+          fx="${RUNNER_TEMP}/fixture"
+          git init -q "${fx}"
+          mkdir -p "${fx}/.github/workflows" "${fx}/src"
+          printf 'jobs:\n  analyze:\n    strategy:\n      matrix:\n        include:\n          - language: actions\n          - language: c-cpp\n' > "${fx}/.github/workflows/codeql.yml"
+          touch "${fx}/src/shim.c"
+          git -C "${fx}" add -A
+          "${check}" "${fx}" "${fx}/.github/workflows/codeql.yml"
+          echo "Pass case passed"
+
+          touch "${fx}/src/tool.py"
+          git -C "${fx}" add -A
+          # Capture output so the expected ::error:: does not annotate this PR
+          if out=$("${check}" "${fx}" "${fx}/.github/workflows/codeql.yml" 2>&1); then
+            echo "::error::Fail case passed; python has no matrix entry"
+            exit 1
+          fi
+          grep -q "language 'python' has files but no matrix entry" <<< "${out}"
+          echo "Fail case failed as expected: python reported missing"
+
+  # Compile the oracle-free/23 UID shim with the Dockerfile's script and base image, then prove it remaps UID 54321
+  fakeuid:
+    name: fakeuid Shim
+    runs-on: ubuntu-26.04
+    container: ghcr.io/oracle/oraclelinux:8-slim
+    timeout-minutes: 10
+    steps:
+      - name: Install build tools
+        run: microdnf install -y gcc glibc-devel git tar && microdnf clean all
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Compile
+        run: oracle-free/23/build-fakeuid.sh "${RUNNER_TEMP}/libfakeuid.so"
+
+      # fakeuid.c wraps stat()/__xstat() and friends; probe through plain stat()
+      - name: Smoke test
+        run: |
+          set -eu
+          cat > "${RUNNER_TEMP}/probe.c" <<'C'
+          #include <stdio.h>
+          #include <sys/stat.h>
+          int main(int argc, char **argv) {
+              struct stat st;
+              if (argc != 2 || stat(argv[1], &st) != 0) return 2;
+              printf("%u\n", (unsigned) st.st_uid);
+              return 0;
+          }
+          C
+          gcc -O2 "${RUNNER_TEMP}/probe.c" -o "${RUNNER_TEMP}/probe"
+          f="${RUNNER_TEMP}/owned-by-54321"
+          touch "${f}"
+          chown 54321 "${f}"
+          plain=$("${RUNNER_TEMP}/probe" "${f}")
+          shimmed=$(LD_PRELOAD="${RUNNER_TEMP}/libfakeuid.so" "${RUNNER_TEMP}/probe" "${f}")
+          echo "euid=$(id -u) plain=${plain} shimmed=${shimmed}"
+          [ "${plain}" = "54321" ]
+          [ "${shimmed}" = "$(id -u)" ]
+
+  # Run the PR-built oracle-free/23 image under an arbitrary OpenShift-style UID and wait for a healthy database
+  oracle-free-smoke:
+    name: oracle-free Smoke
+    needs: [builds, checks]
+    if: contains(needs.checks.outputs.json, '"oracle-free"')
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}/oracle-free:${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Shim preloaded
+        run: |
+          set -eu
+          docker pull "${IMAGE}"
+          docker run --rm --user 1002720000:0 --entrypoint bash "${IMAGE}" -c '
+            set -eu
+            grep -qx /usr/local/lib/libfakeuid.so /etc/ld.so.preload
+            grep -q libfakeuid.so /proc/self/maps
+            echo "euid=$(id -u) libfakeuid.so mapped via /etc/ld.so.preload"
+          '
+
+      - name: Database healthy under arbitrary UID
+        run: |
+          set -eu
+          docker run -d --name oracle --user 1002720000:0 -e ORACLE_RANDOM_PASSWORD=yes "${IMAGE}"
+          for _ in $(seq 60); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' oracle)
+            [ "${status}" = "healthy" ] && break
+            [ "$(docker inspect -f '{{.State.Running}}' oracle)" = "true" ] || break
+            sleep 5
+          done
+          docker logs oracle 2>&1 | tail -n 40
+          echo "health=${status}"
+          [ "${status}" = "healthy" ]
+
   # ==========================================================================
   # WARNING: This job acts as the required merge gate for this workflow.
   # If you add a new job to this workflow, you MUST add its ID to the 'needs'
@@ -82,7 +190,7 @@ jobs:
   # ==========================================================================
   results:
     name: PR Results
-    needs: [builds, checks]
+    needs: [builds, checks, codeql-coverage, fakeuid, oracle-free-smoke]
     if: always()
     runs-on: ubuntu-26.04
     timeout-minutes: 1

@@ -3,8 +3,8 @@ from ghcr.io/oracle/oraclelinux:8-slim as builder
 run microdnf install -y gcc glibc-devel && \
     microdnf clean all
 
-copy fakeuid.c /tmp/fakeuid.c
-run gcc -shared -fPIC -O2 /tmp/fakeuid.c -o /usr/local/lib/libfakeuid.so -ldl
+copy fakeuid.c build-fakeuid.sh /tmp/
+run /tmp/build-fakeuid.sh /usr/local/lib/libfakeuid.so
 
 FROM gvenzl/oracle-free:23.26.3-faststart
 
