@@ -3,7 +3,10 @@ FROM gvenzl/oracle-free:23.26.3-faststart
 USER root
 
 # Enable arbitrary OpenShift UIDs (Red Hat standard: root group ownership and group-writable)
-RUN chgrp -R 0 ${ORACLE_BASE} && \
+# Map Oracle OSDBA/OSOPER/OINSTALL to GID 0 (root group) for OpenShift arbitrary UID compatibility
+RUN sed -i -E 's/^(dba|oinstall|oper):x:[0-9]+:/\1:x:0:/' /etc/group && \
+    chmod g=u /etc/group && \
+    chgrp -R 0 ${ORACLE_BASE} && \
     chmod -R g=u ${ORACLE_BASE} && \
     chmod g=u /etc/passwd
 
