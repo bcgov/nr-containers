@@ -1,4 +1,5 @@
 FROM python:3.14-slim
+# Published tag comes from the FROM tag above; keep pinned to 3.14-slim until 3.15 wheels are ready.
 
 # Generic Alembic/Flyway-style Oracle migration runner base.
 # Ships only the Python runtime + shared deps (alembic, sqlalchemy, oracledb, jproperties, xxhash).
