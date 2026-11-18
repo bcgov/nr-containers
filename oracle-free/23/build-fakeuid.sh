@@ -10,4 +10,4 @@ if [ "$#" -ne 1 ]; then
 fi
 
 src_dir=$(cd "$(dirname "$0")" && pwd)
-gcc -shared -fPIC -O2 "${src_dir}/fakeuid.c" -o "$1" -ldl
+gcc -shared -fPIC -O2 -Wall -Wextra -Werror "${src_dir}/fakeuid.c" -o "$1" -ldl
