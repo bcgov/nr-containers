@@ -12,50 +12,65 @@ concurrency:
 permissions: {}
 
 jobs:
-  # Images whose build context changed: pr-<number> and commit SHA tags only.
-  # Release tags are written by merge.yml on push to main.
+  checks:
+    name: Dockerfile Checks
+    outputs:
+      json: ${{ steps.dockerfiles.outputs.json }}
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Get changed images
+        id: dockerfiles
+        run: |
+          set -euo pipefail
+          # Fetch default_branch (usually main)
+          git fetch origin ${{ github.event.repository.default_branch }}
+
+          # Rebuild any image whose non-Markdown build-context file changed
+          json=$(.github/scripts/changed-images.sh origin/${{ github.event.repository.default_branch }})
+          echo "json=${json}"
+          if [ "${json}" != "[]" ]; then
+            echo "json=${json}" >> "$GITHUB_OUTPUT"
+          fi
+
+  # https://github.com/bcgov/actions/tree/main/builder
   builds:
     name: Builds
-    uses: ./.github/workflows/.builds.yml
+    needs: [checks]
+    if: needs.checks.outputs.json
     permissions:
       attestations: write
       contents: read
       id-token: write
       packages: write
-    with:
-      base: origin/${{ github.event.repository.default_branch }}
-      release: false
+    runs-on: ubuntu-26.04
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.checks.outputs.json) }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Get tag
+        id: tag
+        run: |
+          TAG=$(grep '^FROM' ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile | cut -d':' -f2)
+          echo "full_tag=${TAG}" >> "$GITHUB_OUTPUT"
 
-  # Fixture tests for the scripts .builds.yml and merge.yml depend on
+      - name: Build or import
+        uses: bcgov/actions/builder@d209bb08aabe15e5e69aca53b24d338a7b2843d5 # v0.12.0
+        with:
+          context: ${{ matrix.package }}/${{ matrix.major_tag }}
+          file: ${{ matrix.package }}/${{ matrix.major_tag }}/Dockerfile
+          package: ${{ matrix.package }}
+          tags: ${{ steps.tag.outputs.full_tag }}
+
+  # Fixture tests for changed-images.sh
   build-scripts:
     name: Build Scripts
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Release tags
-        run: |
-          set -euo pipefail
-          tag=${GITHUB_WORKSPACE}/.github/scripts/image-tag.sh
-          # Every image in the repo must resolve a release tag
-          find . -name Dockerfile -not -path './.git/*' | sort | while read -r f; do
-            d=${f#./}; d=${d%/Dockerfile}
-            echo "${d} -> $("${tag}" "${d}")"
-          done
-          # Multi-stage: the final FROM wins, lowercase builder stage ignored
-          [ "$("${tag}" oracle-free/23)" = "23.26.3-faststart" ]
-          fx="${RUNNER_TEMP}/tag"
-          mkdir -p "${fx}"
-          printf 'FROM --platform=linux/amd64 a/b:1 AS x\nFROM ghcr.io/c/d:2.0@sha256:abc AS final\n' > "${fx}/Dockerfile"
-          [ "$("${tag}" "${fx}")" = "2.0" ]
-          printf 'FROM localhost:5000/e\n' > "${fx}/Dockerfile"
-          if out=$("${tag}" "${fx}" 2>&1); then
-            echo "::error::Untagged FROM resolved to '${out}'"
-            exit 1
-          fi
-          grep -q "has no tag" <<< "${out}"
-          echo "Release tag fixtures passed"
 
       - name: Changed images
         run: |
@@ -172,12 +187,12 @@ jobs:
   # Run the PR-built oracle-free/23 image under an arbitrary OpenShift-style UID and wait for a healthy database
   oracle-free-smoke:
     name: oracle-free Smoke
-    needs: [builds]
-    if: contains(needs.builds.outputs.json, '"oracle-free"')
+    needs: [builds, checks]
+    if: contains(needs.checks.outputs.json, '"oracle-free"')
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     env:
-      IMAGE: ghcr.io/${{ github.repository }}/oracle-free:pr-${{ github.event.number }}-23
+      IMAGE: ghcr.io/${{ github.repository }}/oracle-free:${{ github.event.pull_request.head.sha }}
     steps:
       - name: Shim preloaded
         run: |
@@ -208,6 +223,24 @@ jobs:
           echo "health=${status}"
           [ "${status}" = "healthy" ]
 
+  # Build the alembic image and prove a login shell keeps /opt/venv/bin on PATH
+  # when running as an OpenShift-style random non-root UID (no home directory).
+  alembic-login-path:
+    name: alembic Login PATH
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build
+        run: docker build -t alembic-under-test alembic/3.14
+
+      - name: Login shell import oracledb as a random non-root UID
+        run: |
+          set -eu
+          docker run --rm --user 1002720000:0 --entrypoint bash alembic-under-test \
+            -lc 'python -c "import oracledb"'
+
   # ==========================================================================
   # WARNING: This job acts as the required merge gate for this workflow.
   # If you add a new job to this workflow, you MUST add its ID to the 'needs'
@@ -215,7 +248,7 @@ jobs:
   # ==========================================================================
   results:
     name: PR Results
-    needs: [build-scripts, builds, codeql-coverage, fakeuid, oracle-free-smoke]
+    needs: [build-scripts, builds, checks, codeql-coverage, fakeuid, oracle-free-smoke, alembic-login-path]
     if: always()
     runs-on: ubuntu-26.04
     timeout-minutes: 1
