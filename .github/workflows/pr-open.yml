@@ -183,6 +183,24 @@ jobs:
           echo "health=${status}"
           [ "${status}" = "healthy" ]
 
+  # Build the alembic image and prove a login shell keeps /opt/venv/bin on PATH
+  # when running as an OpenShift-style random non-root UID (no home directory).
+  alembic-login-path:
+    name: alembic Login PATH
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build
+        run: docker build -t alembic-under-test alembic/3.14
+
+      - name: Login shell import oracledb as a random non-root UID
+        run: |
+          set -eu
+          docker run --rm --user 1002720000:0 --entrypoint bash alembic-under-test \
+            -lc 'python -c "import oracledb"'
+
   # ==========================================================================
   # WARNING: This job acts as the required merge gate for this workflow.
   # If you add a new job to this workflow, you MUST add its ID to the 'needs'
@@ -190,7 +208,7 @@ jobs:
   # ==========================================================================
   results:
     name: PR Results
-    needs: [builds, checks, codeql-coverage, fakeuid, oracle-free-smoke]
+    needs: [builds, checks, codeql-coverage, fakeuid, oracle-free-smoke, alembic-login-path]
     if: always()
     runs-on: ubuntu-26.04
     timeout-minutes: 1
