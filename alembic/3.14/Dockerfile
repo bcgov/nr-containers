@@ -1,4 +1,4 @@
-FROM python:3.15-slim
+FROM python:3.14-slim
 
 # Generic Alembic/Flyway-style Oracle migration runner base.
 # Ships only the Python runtime + shared deps (alembic, sqlalchemy, oracledb, jproperties, xxhash).
