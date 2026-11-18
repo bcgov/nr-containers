@@ -12,6 +12,7 @@
       "pinDigests": false
     },
     {
+      "description": "Block major Dockerfile updates. Added in #204 after #201 automerged major base bumps; kept as a repo-wide backstop. Versioned-folder locks below also block folder-crossing minors (e.g. python 3.14 to 3.15).",
       "matchManagers": [
         "dockerfile"
       ],
@@ -21,7 +22,20 @@
       "enabled": false
     },
     {
-      "description": "Keep alembic/3.14 on Python 3.14; do not bump across minor versions",
+      "description": "Block major Docker image updates in GitHub Actions container: fields too. The dockerfile-only major rule does not apply to those.",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Keep alembic/3.14 on Python 3.14; do not bump across Python minor versions",
       "matchManagers": [
         "dockerfile"
       ],
@@ -31,10 +45,200 @@
       "matchDatasources": [
         "docker"
       ],
+      "allowedVersions": "/^3\\.14([.-]|$)/",
       "matchPackageNames": [
         "python"
+      ]
+    },
+    {
+      "description": "Lock airbyte /0/ folders to 0.x",
+      "matchManagers": [
+        "dockerfile"
       ],
-      "allowedVersions": "<3.15"
+      "matchFileNames": [
+        "airbyte/airbyte-web/0/**",
+        "airbyte/airbyte-worker/0/**"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "allowedVersions": "/^0([.-]|$)/"
+    },
+    {
+      "description": "Lock bitnami/pgpool/4 to 4.x",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchFileNames": [
+        "bitnami/pgpool/4/**"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "allowedVersions": "/^4([.-]|$)/"
+    },
+    {
+      "description": "Lock versioned folders to major 6",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchFileNames": [
+        "mongo/6/**"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "allowedVersions": "/^6([.-]|$)/"
+    },
+    {
+      "description": "Lock versioned folders to major 7",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchFileNames": [
+        "mongo/7/**"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "allowedVersions": "/^7([.-]|$)/"
+    },
+    {
+      "description": "Lock versioned folders to major 12",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchFileNames": [
+        "bitnami/postgresql/12/**",
+        "bitnami/postgresql-ha/12/**",
+        "postgres/12/**"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "allowedVersions": "/^12([.-]|$)/"
+    },
+    {
+      "description": "Lock versioned folders to major 13",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchFileNames": [
+        "bitnami/postgresql/13/**",
+        "bitnami/postgresql-ha/13/**",
+        "postgres/13/**",
+        "postgis/13/**"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "allowedVersions": "/^13([.-]|$)/"
+    },
+    {
+      "description": "Lock versioned folders to major 14",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchFileNames": [
+        "bitnami/postgresql/14/**",
+        "bitnami/postgresql-ha/14/**",
+        "postgres/14/**",
+        "postgis/14/**"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "allowedVersions": "/^14([.-]|$)/"
+    },
+    {
+      "description": "Lock versioned folders to major 15",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchFileNames": [
+        "bitnami/postgresql/15/**",
+        "bitnami/postgresql-ha/15/**",
+        "postgres/15/**",
+        "postgis/15/**"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "allowedVersions": "/^15([.-]|$)/"
+    },
+    {
+      "description": "Lock versioned folders to major 16",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchFileNames": [
+        "bitnami/postgresql/16/**",
+        "bitnami/postgresql-ha/16/**",
+        "postgres/16/**",
+        "postgis/16/**"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "allowedVersions": "/^16([.-]|$)/"
+    },
+    {
+      "description": "Lock versioned folders to major 17",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchFileNames": [
+        "postgis/17/**"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "allowedVersions": "/^17([.-]|$)/"
+    },
+    {
+      "description": "Lock quarkus jdk-21 folder to 21",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchFileNames": [
+        "quarkus/ubi-quarkus-graalvmce-builder-image/21/**"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "allowedVersions": "/^(jdk-)?21([.-]|$)/"
+    },
+    {
+      "description": "Lock oracle-free/23 final base (gvenzl/oracle-free) to 23.x",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchFileNames": [
+        "oracle-free/23/**"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "gvenzl/oracle-free"
+      ],
+      "allowedVersions": "/^23([.-]|$)/"
+    },
+    {
+      "description": "Lock the oracle-free/23 builder stage to Oracle Linux 8",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchFileNames": [
+        "oracle-free/23/**"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/oracle/oraclelinux"
+      ],
+      "allowedVersions": "/^8([.-]|$)/"
     }
   ]
 }
