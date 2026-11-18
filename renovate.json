@@ -19,6 +19,22 @@
         "major"
       ],
       "enabled": false
+    },
+    {
+      "description": "Keep alembic/3.14 on Python 3.14; do not bump across minor versions",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchFileNames": [
+        "alembic/3.14/**"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "python"
+      ],
+      "allowedVersions": "<3.15"
     }
   ]
 }
