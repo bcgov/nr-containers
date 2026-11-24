@@ -6,7 +6,7 @@ run microdnf install -y gcc glibc-devel && \
 copy fakeuid.c build-fakeuid.sh /tmp/
 run /tmp/build-fakeuid.sh /usr/local/lib/libfakeuid.so
 
-FROM gvenzl/oracle-free:23.26.3-faststart
+FROM gvenzl/oracle-free:23.26.4-faststart
 
 USER root
 
